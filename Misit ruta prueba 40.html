@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SIT Arequipa — Guía Turístico Misti</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"/>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  :root {
+    --scale: 1; --primary: #1976d2; --primary-dark: #115293; --success: #2e7d32; --danger: #c62828;
+    --bg-panel: #ffffff; --bg-body: #f5f7fa; --bg-map: #e5e5e5; --text-main: #1e293b; --text-muted: #64748b; --border: #e2e8f0;
+  }
+  [data-theme="dark"] {
+    --primary: #64b5f6; --primary-dark: #2196f3; --success: #81c784; --danger: #e57373;
+    --bg-panel: #1e1e1e; --bg-body: #121212; --bg-map: #333; --text-main: #e0e0e0; --text-muted: #9e9e9e; --border: #333333;
+  }
+  html,body{margin:0;height:100%;font-family:'Inter', sans-serif; background-color: var(--bg-body); color: var(--text-main); transition: background 0.3s, color 0.3s; overflow: hidden;}
+  #map{position:absolute;top:0;left:0;right:0;bottom:0; z-index: 1; background-color: var(--bg-map);}
+  #panel, .modal-content, #nav-hud, .leaflet-popup-content, #mascot-card { font-size: calc(14px * var(--scale)); }
+  #panel{position:absolute;top:15px;left:15px;z-index:1000;width:380px;max-height:calc(100% - 30px); background:var(--bg-panel);border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,0.2); overflow:hidden; display:flex; flex-direction:column; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);}
+  #panel.collapsed { transform: translateX(calc(-100% - 20px)); }
+  #btn-toggle-panel { position: absolute; top: 50%; left: 395px; transform: translateY(-50%); z-index: 1005; width: 26px; height: 50px; border-radius: 0 12px 12px 0; background: var(--bg-panel); border: 1px solid var(--border); border-left: none; box-shadow: 4px 0 10px rgba(0,0,0,0.1); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s; color: var(--text-muted); font-weight: bold; font-size: 14px; }
+  #btn-toggle-panel:hover { background: var(--bg-body); color: var(--primary); }
+  #btn-toggle-panel.collapsed { left: 0px; border-radius: 0 12px 12px 0; }
+  .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid var(--border); }
+  .panel-header h1 { font-size: 1.1em; font-weight: 700; margin: 0; color: var(--text-main); display: flex; align-items: center; gap: 8px;}
+  .settings-btn { background: transparent; border: none; font-size: 1.4em; cursor: pointer; color: var(--text-muted); transition: 0.2s; padding: 5px; border-radius: 50%;}
+  .settings-btn:hover { background: rgba(150,150,150,0.1); color: var(--primary); transform: rotate(45deg); }
+  .tabs { display: flex; padding: 10px 20px 0; border-bottom: 1px solid var(--border); background: var(--bg-panel); }
+  .tab { flex: 1; text-align: center; padding: 10px 0; cursor: pointer; font-weight: 600; font-size: 1em; color: var(--text-muted); position: relative; transition: 0.2s; }
+  .tab.active { color: var(--primary); }
+  .tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 3px; background: var(--primary); border-radius: 3px 3px 0 0;}
+  .tab-content { display: none; padding: 15px 20px; overflow-y: auto; flex: 1;}
+  .tab-content.active { display: block; }
+  #rutas-container { max-height: 400px; overflow-y: auto; padding-right: 5px; margin-bottom: 10px;}
+  .empresa-group { margin-bottom: 8px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg-panel); transition: 0.2s;}
+  .empresa-header { background: rgba(150,150,150,0.05); padding: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; font-size: 0.95em; color: var(--text-main); }
+  .empresa-color-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.2); display: inline-block; flex-shrink: 0;}
+  .empresa-body { padding: 5px 10px; display: none; background: var(--bg-panel); }
+  .empresa-body.open { display: block; }
+  .ruta{display:flex;align-items:center;gap:10px;padding:8px;cursor:pointer; font-size:0.9em; border-radius:6px; transition: 0.1s;}
+  .ruta:hover{background:rgba(150,150,150,0.1)}
+  .sw{width:16px;height:16px;border-radius:6px;flex:none;border:1px solid rgba(0,0,0,.1)}
+  .ruta .name{flex:1; overflow:hidden; color: var(--text-main); display:flex; flex-direction:column; justify-content:center;}
+  .ruta .name .ref {font-weight:700; font-size:1.05em;}
+  .ruta .name .desc {font-size:0.85em; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;}
+  .fav-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; align-items: stretch; scrollbar-width: none; }
+  .fav-row::-webkit-scrollbar { display: none; }
+  .fav-btn { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px 5px 8px 5px; cursor: pointer; min-width: 75px; transition: 0.2s;}
+  .fav-btn:hover { background: rgba(150,150,150,0.05); border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.05);}
+  .fav-btn .icon { font-size: 1.8em; margin-bottom: 4px;}
+  .fav-btn .name { font-size: 0.8em; color: var(--text-muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70px;}
+  .fav-edit { position: absolute; top: -6px; right: -6px; background: var(--primary); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 10px; line-height: 22px; text-align: center; cursor: pointer; border: 2px solid var(--bg-panel); z-index: 2; box-shadow: 0 2px 4px rgba(0,0,0,0.2);}
+  .fav-delete { position: absolute; top: -6px; left: -6px; background: var(--danger); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 10px; line-height: 22px; text-align: center; cursor: pointer; border: 2px solid var(--bg-panel); z-index: 2; box-shadow: 0 2px 4px rgba(0,0,0,0.2);}
+  .search-box { position: relative; margin-bottom: 15px; }
+  .search-box input { width: 100%; padding: 12px 12px 12px 40px; border: 1px solid var(--border); border-radius: 10px; font-size: 0.95em; box-sizing: border-box; outline: none; transition: 0.2s; background: var(--bg-panel); color: var(--text-main);}
+  .search-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(25,118,210,0.1); }
+  .search-icon { position: absolute; left: 14px; top: 12px; color: var(--text-muted); font-size: 1.1em;}
+  #search-results { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-height: 200px; overflow-y: auto; z-index: 1000; display: none; }
+  .search-item { padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 0.9em; color: var(--text-main); }
+  .search-item:hover { background: rgba(150,150,150,0.1); }
+  .input-group { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; background: var(--bg-panel); padding: 12px; border-radius: 10px; border: 1px solid var(--border); position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
+  .input-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 0.9em; flex-shrink: 0;}
+  .icon-a { background: var(--success); } .icon-b { background: var(--danger); }
+  .input-group .text { flex: 1; font-size: 0.95em; color: var(--text-muted); }
+  .swap-btn { background: rgba(150,150,150,0.1); border: none; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1em; transition: 0.2s; color: var(--text-main);}
+  .swap-btn:hover { background: rgba(150,150,150,0.2); transform: rotate(180deg);}
+  .main-btn { background: var(--primary); color: white; padding: 14px; border-radius: 10px; text-align: center; cursor: pointer; font-weight: 600; font-size: 1em; border: none; width: 100%; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px;}
+  .main-btn:hover { background: var(--primary-dark); box-shadow: 0 4px 12px rgba(25,118,210,0.3);}
+  .step3-header { display:flex; gap:10px; margin-bottom:15px; align-items:center; background:rgba(150,150,150,0.05); padding:10px 15px; border-radius:10px; border:1px solid var(--border); }
+  .plan-results { max-height: 380px; overflow-y: auto; padding-bottom: 10px;}
+  .result-card { border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px; background: var(--bg-panel); transition: all 0.3s ease; position: relative; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.02);}
+  .result-card:hover { box-shadow: 0 6px 15px rgba(0,0,0,0.08); border-color: var(--text-muted); transform: translateY(-2px);}
+  .result-card.inactive { opacity: 0.6; filter: grayscale(50%); } .result-card.active { border-color: var(--primary); box-shadow: 0 6px 15px rgba(25, 118, 210, 0.15); transform: scale(1);}
+  .result-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px dashed var(--border); padding-bottom: 10px;}
+  .result-title { font-weight: 700; font-size: 1.1em; display: flex; flex-direction: column; gap: 2px; color: var(--text-main);}
+  .timeline { position: relative; margin-left: 5px; margin-bottom: 15px;}
+  .timeline-item { display: flex; gap: 12px; margin-bottom: 10px; position: relative; }
+  .t-icon { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8em; flex-shrink: 0; z-index: 2; border: 2px solid var(--bg-panel); box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
+  .t-icon.walk { background: #e2e8f0; color: #475569; } .t-icon.bus { background: var(--primary); color: white; }
+  .t-icon.start { background: var(--success); color: white; } .t-icon.end { background: var(--danger); color: white; }
+  .t-line { position: absolute; left: 10px; top: 22px; bottom: -10px; width: 2px; background: var(--border); z-index: 1; }
+  .timeline-item:last-child .t-line { display: none; }
+  .t-content { font-size: 0.95em; color: var(--text-main); padding-top: 2px; flex: 1; line-height: 1.4;}
+  .card-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .btn-action { flex: 1; padding: 10px; border-radius: 8px; font-size: 0.95em; font-weight: 600; cursor: pointer; border: none; transition: 0.2s;}
+  .btn-start { background: var(--success); color: white; } .btn-start:hover { background: #1b5e20; }
+  .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(3px);}
+  .modal-content { background: var(--bg-panel); border-radius: 16px; width: 90%; max-width: 400px; padding: 25px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); position: relative; animation: slideUp 0.3s ease; max-height: 90vh; overflow-y: auto;}
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0;} to { transform: translateY(0); opacity: 1;} }
+  .modal-close { position: absolute; top: 15px; right: 20px; font-size: 1.5em; cursor: pointer; color: var(--text-muted); background: none; border: none;}
+  .modal-content h2 { margin-top: 0; font-size: 1.3em; color: var(--text-main); margin-bottom: 20px;}
+  .setting-group { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
+  .setting-group:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0;}
+  .setting-group label { display: block; font-size: 0.9em; font-weight: 600; color: var(--text-muted); margin-bottom: 10px;}
+  .setting-group select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-body); color: var(--text-main); font-family: inherit; font-size: 0.95em; outline: none; cursor: pointer; }
+  .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+  .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+  input:checked + .slider { background-color: var(--primary); }
+  input:checked + .slider:before { transform: translateX(22px); }
+  .btn-setting { background: var(--bg-body); color: var(--text-main); border: 1px solid var(--border); padding: 12px; border-radius: 8px; width: 100%; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 10px; transition: 0.2s; font-size: 0.95em; justify-content: center; margin-top: 10px;}
+  .btn-setting:hover { background: rgba(150,150,150,0.1); border-color: var(--text-muted);}
+  .btn-setting.danger { color: var(--danger); border-color: #fecaca; background: rgba(198,40,40,0.1);}
+  .btn-setting.danger:hover { background: rgba(198,40,40,0.2); }
+  #fileInput { display: none; }
+  #predefined-favs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-height: 300px; overflow-y: auto; padding-right: 5px; margin-bottom: 15px;}
+  .pred-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:12px 5px; border:1px solid var(--border); border-radius:8px; cursor:pointer; transition:0.2s; background:var(--bg-panel); }
+  .pred-btn:hover { background:rgba(150,150,150,0.1); border-color:var(--primary); transform:translateY(-2px);}
+  .pred-btn .icon { font-size: 1.5em; margin-bottom:5px; }
+  .pred-btn .name { font-size: 0.8em; font-weight: 600; color: var(--text-main); text-align:center; }
+  #nav-hud { display: none; position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 20px 25px; border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); z-index: 2000; width: 90%; max-width: 400px; text-align: center; border: 2px solid var(--primary); }
+  #nav-hud h3 { margin: 0 0 8px 0; color: #4caf50; font-size: 1.2em;} #nav-hud p { margin: 0 0 10px 0; font-size: 1em; color: #cbd5e1;}
+  #nav-hud button { border: none; padding: 12px 15px; border-radius: 8px; margin-top: 10px; cursor: pointer; font-size: 0.95em; font-weight: 600; width: 100%; transition: 0.2s;}
+  #btn-confirm-step { background: var(--success); color: white; margin-bottom: 5px;}
+  #btn-confirm-step:hover { background: #1b5e20; }
+  .cancel-nav { background: var(--danger); color: white; }
+  #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 3000; display: flex; flex-direction: column; gap: 10px; align-items: center; pointer-events: none;}
+  .toast { background: #333; color: white; padding: 12px 24px; border-radius: 30px; font-size: 0.95em; font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,0.2); opacity: 0; transform: translateY(20px); transition: all 0.3s ease; display: flex; align-items: center; gap: 10px;}
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { background: var(--success); }
+  .toast.error { background: var(--danger); }
+  .toast.wait { background: #f57c00; }
+  #btn-gps { position: absolute; bottom: 20px; right: 70px; z-index: 1000; width: 50px; height: 50px; border-radius: 50%; background: var(--bg-panel); color: var(--primary); border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 1.5em; transition: 0.2s; }
+  #btn-gps:hover { transform: scale(1.1); background: var(--bg-body); }
+  #mascot-btn { position: absolute; bottom: 20px; right: 140px; z-index: 1000; width: 60px; height: 60px; border-radius: 50%; background: #ffca28; border: 3px solid #d32f2f; box-shadow: 0 4px 15px rgba(0,0,0,0.3); cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 2em; transition: 0.3s; animation: bounce 2s infinite;}
+  #mascot-btn:hover { transform: scale(1.1); }
+  @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+  .delete-marker-btn { position: absolute; top: -8px; right: -8px; background: var(--danger); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; font-weight: bold; line-height: 20px; text-align: center; cursor: pointer; border: 2px solid white; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.3);}
+  .delete-marker-btn:hover { background: #b71c1c; transform: scale(1.1);}
+  #mascot-card { display: none; position: absolute; bottom: 90px; right: 20px; width: 350px; background: var(--bg-panel); border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); z-index: 2500; overflow: hidden; border: 3px solid #d32f2f; animation: slideUp 0.4s ease; }
+  #mascot-card .header { background: #d32f2f; color: white; padding: 12px 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; font-size: 1.1em;}
+  #mascot-card .close { cursor: pointer; font-size: 24px; line-height: 1; }
+  #mascot-card .body { padding: 20px; text-align: center; position: relative;}
+  .mascot-avatar { width: 100px; height: 100px; margin: 0 auto 15px; background: #ffe0b2; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 4em; border: 3px solid #d32f2f; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+  #mascot-card h3 { margin: 0 0 10px 0; color: var(--text-main); font-size: 1.3em; }
+  #mascot-card p { margin: 0; font-size: 0.95em; color: var(--text-muted); line-height: 1.5; text-align: justify;}
+  .leaflet-popup-content { margin: 8px 12px; }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+<button id="btn-gps" onclick="centrarGPS()" title="Mi ubicación">📍</button>
+<button id="btn-toggle-panel" onclick="togglePanel()" title="Ocultar/Mostrar Panel">◀</button>
+
+<button id="mascot-btn" onclick="toggleMascotCard()" title="Habla con Misti">🦁</button>
+
+<div id="mascot-card">
+  <div class="header">
+    <span>🦁 Misti</span>
+    <span class="close" onclick="document.getElementById('mascot-card').style.display='none'">&times;</span>
+  </div>
+  <div class="body">
+    <div class="mascot-avatar">🦁</div>
+    <h3 id="mascot-title">¡Hola, soy Misti!</h3>
+    <p id="mascot-desc">Soy tu guía virtual. Activa los puntos de interés en los Ajustes (⚙️) y te contaré los secretos mejor guardados de la Ciudad Blanca mientras viajas.</p>
+  </div>
+</div>
+
+<div id="panel">
+  <div class="panel-header">
+    <h1><span style="color:var(--primary)">🗺️</span> <span data-i18n="app_title">SIT Arequipa</span></h1>
+    <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('explorar')" data-i18n="tab_explore">Explorar</div>
+    <div class="tab" onclick="switchTab('planificar')" data-i18n="tab_plan">Planificar Viaje</div>
+  </div>
+
+  <div id="tab-explorar" class="tab-content active">
+    <div style="display:flex; gap:10px; margin-bottom:10px;">
+      <button class="btn-setting" style="padding:8px; font-size:0.85em;" onclick="toggleAll(true)" data-i18n="show_all">👁️ Mostrar Todo</button>
+      <button class="btn-setting" style="padding:8px; font-size:0.85em;" onclick="toggleAll(false)" data-i18n="hide_all">🙈 Ocultar Todo</button>
+    </div>
+    <div id="rutas-container"></div>
+  </div>
+
+  <div id="tab-planificar" class="tab-content">
+    <div id="fav-container" class="fav-row"></div>
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="Buscar dirección, lugar..." data-i18n="search_placeholder" autocomplete="off">
+      <div id="search-results"></div>
+    </div>
+    <div id="plan-step-1">
+      <div class="input-group">
+        <div class="input-icon icon-a">A</div>
+        <div class="text" id="text-a" data-i18n="enter_origin">Ingresa tu origen</div>
+      </div>
+      <button class="main-btn" id="btn-set-a" onclick="activarModoMapa('A')" data-i18n="mark_a">📍 Marcar Punto A</button>
+    </div>
+    <div id="plan-step-2" style="display:none;">
+      <div class="input-group">
+        <div class="input-icon icon-a">A</div>
+        <div class="text" id="text-a-set" data-i18n="point_a_marked">Punto A Marcado</div>
+        <button class="swap-btn" onclick="intercambiarPuntos()" title="Intercambiar">🔄</button>
+      </div>
+      <div class="input-group">
+        <div class="input-icon icon-b">B</div>
+        <div class="text" id="text-b" data-i18n="enter_dest">Ingresa tu destino</div>
+      </div>
+      <button class="main-btn" id="btn-set-b" onclick="activarModoMapa('B')" data-i18n="mark_b">📍 Marcar Punto B</button>
+    </div>
+    <div id="plan-step-3" style="display:none;">
+      <div class="step3-header">
+        <div class="input-icon icon-a" style="width:22px;height:22px;font-size:0.8em;">A</div>
+        <div style="flex:1; font-size:0.85em; font-weight:600;" id="text-a-final">Origen</div>
+        <button class="swap-btn" style="width:28px; height:28px; font-size:0.9em;" onclick="intercambiarPuntos()" title="Intercambiar">🔄</button>
+        <div class="input-icon icon-b" style="width:22px;height:22px;font-size:0.8em; margin-left:5px;">B</div>
+        <div style="flex:1; font-size:0.85em; font-weight:600;" id="text-b-final">Destino</div>
+      </div>
+      <div style="display:flex; gap:10px; margin-bottom:15px;">
+        <button class="main-btn" style="background:var(--success);" onclick="calcularRutasPlanner()" data-i18n="calculate">🚀 Calcular</button>
+        <button class="main-btn" style="background:#64748b; flex:0.4;" onclick="limpiarPlanificador()">🗑️</button>
+      </div>
+      <div class="plan-results" id="plan-results"></div>
+    </div>
+  </div>
+</div>
+
+<div id="settings-modal" class="modal-overlay">
+  <div class="modal-content">
+    <button class="modal-close" onclick="toggleSettings()">&times;</button>
+    <h2 data-i18n="settings_title">Ajustes</h2>
+    <div class="setting-group">
+      <label data-i18n="language">Idioma</label>
+      <select id="select-lang" onchange="changeLanguage(this.value)">
+        <option value="es">Español</option>
+        <option value="en">English</option>
+        <option value="qu">Runasimi (Quechua)</option>
+      </select>
+    </div>
+    <div class="setting-group">
+      <label data-i18n="theme">Tema</label>
+      <select id="select-theme" onchange="changeTheme(this.value)">
+        <option value="system" data-i18n="theme_sys">Predeterminado del sistema</option>
+        <option value="light" data-i18n="theme_light">Claro</option>
+        <option value="dark" data-i18n="theme_dark">Oscuro</option>
+      </select>
+    </div>
+    <div class="setting-group">
+      <label data-i18n="font_size">Tamaño de letra</label>
+      <select id="select-font" onchange="changeFontSize(this.value)">
+        <option value="small" data-i18n="font_small">Pequeño</option>
+        <option value="normal" data-i18n="font_normal">Normal</option>
+        <option value="large" data-i18n="font_large">Grande</option>
+      </select>
+    </div>
+    <div class="setting-group" style="border-top:1px solid var(--border); padding-top:15px;">
+      <label>Lugares de Interés (Guía Misti 🦁)</label>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <span style="font-size:13px;">🏛️ Históricos/Turísticos</span>
+        <label class="switch"><input type="checkbox" id="toggle-hist" onchange="toggleLayer('history', this.checked)"><span class="slider"></span></label>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <span style="font-size:13px;">🏥 Hospitales</span>
+        <label class="switch"><input type="checkbox" id="toggle-hosp" onchange="toggleLayer('hospital', this.checked)"><span class="slider"></span></label>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <span style="font-size:13px;">🏛️ Municipalidades</span>
+        <label class="switch"><input type="checkbox" id="toggle-muni" onchange="toggleLayer('muni', this.checked)"><span class="slider"></span></label>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:13px;">🚓 Comisarías</span>
+        <label class="switch"><input type="checkbox" id="toggle-police" onchange="toggleLayer('police', this.checked)"><span class="slider"></span></label>
+      </div>
+    </div>
+    <div class="setting-group" style="border-top:1px solid var(--border); padding-top:15px;">
+      <label data-i18n="data_manage">Gestión de Datos</label>
+      <input type="file" id="fileInput" accept=".json" />
+      <label for="fileInput" class="btn-setting">📂 <span data-i18n="upload_json">Subir export.json</span></label>
+      <button id="btnGTFS" class="btn-setting" disabled>⬇️ <span data-i18n="download_gtfs">Descargar GTFS</span></button>
+      <button id="btnClear" class="btn-setting danger">🗑️ <span data-i18n="clear_data">Borrar datos</span></button>
+    </div>
+  </div>
+</div>
+
+<div id="add-fav-modal" class="modal-overlay">
+  <div class="modal-content">
+    <button class="modal-close" onclick="$('add-fav-modal').style.display='none'">&times;</button>
+    <h2 data-i18n="add_fav">Agregar Favorito</h2>
+    <div id="predefined-favs"></div>
+    <button class="btn-setting" onclick="agregarFavoritoPersonalizado()" style="justify-content:center; margin-top:10px;">➕ <span data-i18n="custom_fav">Crear Personalizado</span></button>
+  </div>
+</div>
+
+<div id="nav-hud">
+  <h3 id="nav-title">...</h3>
+  <p id="nav-desc">...</p>
+  <button id="btn-confirm-step" onclick="confirmarPasoNavegacion()" style="display:none;">He subido al bus</button>
+  <button class="cancel-nav" onclick="detenerNavegacion()" data-i18n="end_route">Finalizar Recorrido</button>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-polylinedecorator/1.6.0/leaflet.polylineDecorator.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<script>
+if (typeof L === 'undefined') { alert('ERROR: Falta Leaflet.'); throw new Error(); }
+
+// ==========================================
+// SERVICE WORKER PARA MODO OFFLINE
+// ==========================================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(registration => {
+      console.log('ServiceWorker registrado con éxito:', registration.scope);
+    }).catch(error => {
+      console.log('Fallo al registrar el ServiceWorker:', error);
+    });
+  });
+}
+
+// ==========================================
+// SISTEMA DE IDIOMAS (i18n)
+// ==========================================
+const dict = {
+  es: { app_title: "SIT Arequipa", tab_explore: "Explorar", tab_plan: "Planificar Viaje", show_all: "👁️ Mostrar Todo", hide_all: "🙈 Ocultar Todo", search_placeholder: "Buscar dirección, lugar...", enter_origin: "Ingresa tu origen", mark_a: "📍 Marcar Punto A", point_a_marked: "Punto A Marcado", enter_dest: "Ingresa tu destino", mark_b: "📍 Marcar Punto B", calculate: "🚀 Calcular", settings_title: "Ajustes", language: "Idioma", theme: "Tema", theme_sys: "Predeterminado del sistema", theme_light: "Claro", theme_dark: "Oscuro", font_size: "Tamaño de letra", font_small: "Pequeño", font_normal: "Normal", font_large: "Grande", history_title: "Sugerencias Históricas", history_desc: "Cuéntame datos curiosos al viajar", data_manage: "Gestión de Datos", upload_json: "Subir export.json", download_gtfs: "Descargar GTFS", clear_data: "Borrar datos", add_fav: "Agregar Favorito", custom_fav: "Crear Personalizado", end_route: "Finalizar Recorrido", fav_casa: "Casa", fav_trabajo: "Trabajo", fav_escuela: "Escuela", walk: "Caminar", take_bus: "Tomar", towards: "hacia", get_off: "Bajar y caminar", transfer: "Transbordo", arrived: "¡Has llegado!", arrived_desc: "Estás en tu destino final.", get_off_now: "¡Es hora de bajar!", get_off_desc: "Baja del bus.", wait_bus: "Espera el bus", walk_to_stop: "Camina al paradero", navigate: "Navegando...", no_routes: "No hay rutas viables.", min: "min", show_more: "Mostrar más" },
+  en: { app_title: "SIT Arequipa", tab_explore: "Explore", tab_plan: "Plan Trip", show_all: "👁️ Show All", hide_all: "🙈 Hide All", search_placeholder: "Search address, place...", enter_origin: "Enter your origin", mark_a: "📍 Mark Point A", point_a_marked: "Point A Marked", enter_dest: "Enter your destination", mark_b: "📍 Mark Point B", calculate: "🚀 Calculate", settings_title: "Settings", language: "Language", theme: "Theme", theme_sys: "System default", theme_light: "Light", theme_dark: "Dark", font_size: "Font size", font_small: "Small", font_normal: "Normal", font_large: "Large", history_title: "Historical Insights", history_desc: "Tell me fun facts while traveling", data_manage: "Data Management", upload_json: "Upload export.json", download_gtfs: "Download GTFS", clear_data: "Clear data", add_fav: "Add Favorite", custom_fav: "Create Custom", end_route: "End Route", fav_casa: "Home", fav_trabajo: "Work", fav_escuela: "School", walk: "Walk", take_bus: "Take", towards: "towards", get_off: "Get off and walk", transfer: "Transfer", arrived: "You have arrived!", arrived_desc: "You are at your final destination.", get_off_now: "Time to get off!", get_off_desc: "Get off the bus.", wait_bus: "Wait for the bus", walk_to_stop: "Walk to the stop", navigate: "Navigating...", no_routes: "No viable routes found.", min: "min", show_more: "Show more" },
+  qu: { app_title: "SIT Arequipa", tab_explore: "Maskay", tab_plan: "Ñan Paqarin", show_all: "👁️ Qhawachiy", hide_all: "🙈 Pakay", search_placeholder: "Maskay maypi...", enter_origin: "Qallariy maypi", mark_a: "📍 Qallariy (A)", point_a_marked: "Qallariy marcado", enter_dest: "Chayana maypi", mark_b: "📍 Chayana (B)", calculate: "🚀 Yupay", settings_title: "Allichay", language: "Simi", theme: "Llimpi", theme_sys: "Sistema", theme_light: "Achik", theme_dark: "Laqha", font_size: "Qelqa sayay", font_small: "Huchuy", font_normal: "Kikinchay", font_large: "Hatun", history_title: "Ñawpaq Willakuykuna", history_desc: "Willaway ñanpi", data_manage: "Willakuykuna", upload_json: "Subir export.json", download_gtfs: "GTFS Apachiy", clear_data: "Pichay", add_fav: "Munasqata Yapay", custom_fav: "Kikin Munasqa", end_route: "Tukuy", fav_casa: "Wasi", fav_trabajo: "Llank'ana", fav_escuela: "Yachaywasi", walk: "Puriy", take_bus: "Riy", towards: "chayman", get_off: "Uraykuspa puriy", transfer: "Tikray", arrived: "¡Chayasqanki!", arrived_desc: "Chayanaykipim kashanki.", get_off_now: "¡Uraykuy!", get_off_desc: "Busmanta uraykuy.", wait_bus: "Bus suyay", walk_to_stop: "Paraderoman puriy", navigate: "Ñan puriy...", no_routes: "Mana ñan kanchu.", min: "min", show_more: "Astawan qhaway" }
+};
+
+let currentLang = localStorage.getItem('sit_lang') || 'es';
+if (!dict[currentLang]) currentLang = 'es';
+
+function applyLanguage(lang) {
+  try {
+    const safeLang = dict[lang] ? lang : 'es';
+    currentLang = safeLang;
+    localStorage.setItem('sit_lang', safeLang);
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (dict[safeLang][key]) el.textContent = dict[safeLang][key];
+    });
+    const searchInput = $('search-input');
+    if (searchInput) searchInput.placeholder = dict[safeLang].search_placeholder;
+    const defaultFavs = { casa: 'fav_casa', trabajo: 'fav_trabajo', escuela: 'fav_escuela' };
+    favoritos.forEach(f => {
+      if (defaultFavs[f.id]) f.name = dict[safeLang][defaultFavs[f.id]];
+    });
+    renderFavoritos();
+    updateAllLayers(); 
+  } catch(e) { console.warn("Error applying language", e); }
+}
+
+window.changeLanguage = function(lang) {
+  applyLanguage(lang);
+  if ($('plan-results').innerHTML !== '') calcularRutasPlanner();
+};
+
+// ==========================================
+// SISTEMA DE TEMAS
+// ==========================================
+let currentTheme = localStorage.getItem('sit_theme') || 'system';
+let currentTileLayer = null;
+
+function applyTheme(theme) {
+  try {
+    currentTheme = theme;
+    localStorage.setItem('sit_theme', theme);
+    let isDark = false;
+    if (theme === 'system') {
+      isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    } else {
+      isDark = theme === 'dark';
+      document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    }
+    if (currentTileLayer && map) map.removeLayer(currentTileLayer);
+    if (map) {
+      if (isDark) {
+        currentTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 }).addTo(map);
+      } else {
+        currentTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 }).addTo(map);
+      }
+    }
+  } catch(e) { console.warn("Error applying theme", e); }
+}
+window.changeTheme = function(theme) { applyTheme(theme); };
+
+// ==========================================
+// SISTEMA DE TAMAÑO DE FUENTE
+// ==========================================
+let currentFont = localStorage.getItem('sit_font') || 'normal';
+function applyFontSize(size) {
+  try {
+    currentFont = size;
+    localStorage.setItem('sit_font', size);
+    const scale = size === 'small' ? 0.85 : (size === 'large' ? 1.15 : 1);
+    document.documentElement.style.setProperty('--scale', scale);
+  } catch(e) {}
+}
+window.changeFontSize = function(size) { applyFontSize(size); };
+
+// ==========================================
+// RETRAER PANEL
+// ==========================================
+window.togglePanel = function() {
+  const panel = $('panel');
+  const btn = $('btn-toggle-panel');
+  if (panel.classList.contains('collapsed')) {
+    panel.classList.remove('collapsed'); btn.classList.remove('collapsed'); btn.innerHTML = '◀';
+  } else {
+    panel.classList.add('collapsed'); btn.classList.add('collapsed'); btn.innerHTML = '▶';
+  }
+};
+
+// ==========================================
+// CAPAS DE POIs CORREGIDAS
+// ==========================================
+const layerHistory = L.layerGroup();
+const layerHospitals = L.layerGroup();
+const layerMunicipalities = L.layerGroup();
+const layerPolice = L.layerGroup();
+
+let activeLayers = JSON.parse(localStorage.getItem('sit_layers')) || { history: true, hospital: false, muni: false, police: false };
+
+const POI_DATA = {
+  history: [
+    { id: 'plaza', lat: -16.398806, lon: -71.536883, name: { es: 'Plaza de Armas', en: 'Plaza de Armas', qu: 'Plaza de Armas' }, desc: { es: 'Fundada en 1540. Rodeada por la Catedral, cuya fachada de sillar blanco es un ícono de la ciudad.', en: 'Founded in 1540. Surrounded by the Cathedral, whose white sillar facade is an icon of the city.', qu: '1540 watapi kamarisqa. Catedralwan muyusqa, puka qelqan llimpin.' } },
+    { id: 'santacatalina', lat: -16.395147, lon: -71.536535, name: { es: 'Monasterio de Santa Catalina', en: 'Santa Catalina Monastery', qu: 'Santa Catalina Monasterio' }, desc: { es: 'Una ciudadela dentro de la ciudad. Construido en 1580.', en: 'A citadel within the city. Built in 1580.', qu: 'Huk llaqtapi huk llaqta. 1580 watapi ruwasqa.' } },
+    { id: 'tristan', lat: -16.398109, lon: -71.535928, name: { es: 'Casona Tristán del Pozo', en: 'Tristán del Pozo Mansion', qu: 'Tristán del Pozo Wasin' }, desc: { es: 'Una de las casonas más bellas del barroco arequipeño (siglo XVIII).', en: 'One of the most beautiful mansions of Arequipa Baroque (18th century).', qu: 'Arequipa barroco wasikunamanta sumaq wasi.' } },
+    { id: 'yanahuara', lat: -16.387482, lon: -71.541754, name: { es: 'Mirador de Yanahuara', en: 'Yanahuara Viewpoint', qu: 'Yanahuara Qhawana' }, desc: { es: 'Famoso por sus arcos construidos en el siglo XIX. Vista impresionante del volcán Misti.', en: 'Famous for its arches built in the 19th century. Impressive view of the Misti volcano.', qu: '19 siglopi ruwasqa arcos famosos. Misti nina urquq rikuynin.' } },
+    { id: 'sabandia', lat: -16.456741, lon: -71.499863, name: { es: 'Molino de Sabandía', en: 'Sabandia Mill', qu: 'Sabandía Molino' }, desc: { es: 'Ubicado en el distrito de Sabandía. Este molino de piedra fue construido en 1621.', en: 'Located in the Sabandia district. This stone mill was built in 1621.', qu: 'Sabandía distritopi. Kay rumi molino 1621 watapi ruwasqa.' } },
+    { id: 'sillar', lat: -16.359621, lon: -71.608681, name: { es: 'Ruta del Sillar', en: 'Sillar Route', qu: 'Sillar Ñan' }, desc: { es: 'Un recorrido por las canteras de donde se extrae el sillar.', en: 'A tour of the quarries where sillar is extracted.', qu: 'Sillar qaqakunata rikuy.' } },
+    { id: 'puente', lat: -16.410404, lon: -71.548202, name: { es: 'Puente de Fierro', en: 'Iron Bridge', qu: 'Hierro Chaka' }, desc: { es: 'También conocido como Puente Bolívar. Fue construido en 1880.', en: 'Also known as Bolivar Bridge. Built in 1880.', qu: 'Bolívar Chaka nisqapas. 1880 watapi ruwasqa.' } },
+    { id: 'sancamilo', lat: -16.403025, lon: -71.532045, name: { es: 'Mercado San Camilo', en: 'San Camilo Market', qu: 'San Camilo Qhatu' }, desc: { es: 'Diseñado por Gustave Eiffel en 1881.', en: 'Designed by Gustave Eiffel in 1881.', qu: 'Gustave Eiffel 1881 watapi ruwasqa.' } },
+    { id: 'sanlazaro', lat: -16.393234, lon: -71.533678, name: { es: 'Barrio de San Lázaro', en: 'San Lazaro Neighborhood', qu: 'San Lázaro Barrio' }, desc: { es: 'El barrio más antiguo de Arequipa.', en: 'The oldest neighborhood in Arequipa.', qu: 'Arequipaq ñawpaq barrión.' } },
+    { id: 'sanpedro', lat: -16.373325, lon: -71.560318, name: { es: 'Iglesia de San Pedro (Cerro Colorado)', en: 'San Pedro Church', qu: 'San Pedro Iglesia' }, desc: { es: 'Una joya histórica de 1789 en el distrito de Cerro Colorado.', en: 'A historical jewel from 1789 in the Cerro Colorado district.', qu: '1789 watapi Cerro Colorado distritopi sumaq willakuy.' } },
+    { id: 'mansion', lat: -16.46395, lon: -71.55642, name: { es: 'Mansión del Fundador', en: 'Founder\'s Mansion', qu: 'Fundador Wasin' }, desc: { es: 'Una casona colonial construida en el siglo XVI, en la Av. Paisajista, distrito de Huasacache.', en: 'A colonial mansion built in the 16th century, on Av. Paisajista, Huasacache district.', qu: '16 siglopi ruwasqa colonial wasi. Av. Paisajista, Huasacache distritopi.' } },
+    { id: 'andenes', lat: -16.432746, lon: -71.501248, name: { es: 'Andenes de Paucarpata', en: 'Paucarpata Terraces', qu: 'Paucarpata Andenes' }, desc: { es: 'Terrazas agrícolas construidas por culturas preincaicas.', en: 'Agricultural terraces built by pre-Inca cultures.', qu: 'Pre-inca culturaskuna ruwasqa chakrakuna.' } }
+  ],
+  hospital: [
+    { id: 'honorio', lat: -16.415344, lon: -71.532481, name: { es: 'Hospital Honorio Delgado', en: 'Honorio Delgado Hospital', qu: 'Honorio Delgado Hampina Wasi' }, desc: { es: 'Principal hospital del Ministerio de Salud (MINSA).', en: 'Main Ministry of Health hospital.', qu: 'Hatun hampina wasi (MINSA).' } },
+    { id: 'goyeneche', lat: -16.402459, lon: -71.527534, name: { es: 'Hospital Goyeneche', en: 'Goyeneche Hospital', qu: 'Goyeneche Hampina Wasi' }, desc: { es: 'Hospital histórico y emblemático de Arequipa.', en: 'Historical and emblematic hospital.', qu: 'Arequipaq ñawpaq hampina wasi.' } },
+    { id: 'escomel', lat: -16.41722, lon: -71.50866, name: { es: 'Hospital Edmundo Escomel', en: 'Edmundo Escomel Hospital', qu: 'Edmundo Escomel Hampina Wasi' }, desc: { es: 'Hospital de ESSALUD en el distrito de Paucarpata.', en: 'ESSALUD hospital in the Paucarpata district.', qu: 'ESSALUD hampina wasi (Paucarpata).' } },
+    { id: 'carlos', lat: -16.39528, lon: -71.52965, name: { es: 'Hospital Carlos Alberto Seguín', en: 'Carlos Alberto Seguín Hospital', qu: 'Carlos Alberto Seguín Hampina Wasi' }, desc: { es: 'Hospital de ESSALUD en el Cercado.', en: 'ESSALUD hospital in the center.', qu: 'ESSALUD hampina wasi.' } }
+  ],
+  muni: [
+    { id: 'muni_prov', lat: -16.399237, lon: -71.536486, name: { es: 'Municipalidad Provincial', en: 'Provincial Municipality', qu: 'Suyu Munisipyu' }, desc: { es: 'Sede del gobierno local de Arequipa.', en: 'Local government headquarters.', qu: 'Arequipaq kamachiq wasi.' } },
+    { id: 'muni_cerro', lat: -16.375251, lon: -71.560571, name: { es: 'Municipalidad de Cerro Colorado', en: 'Cerro Colorado Municipality', qu: 'Cerro Colorado Munisipyu' }, desc: { es: 'Gobierno distrital.', en: 'District government.', qu: 'Distrito kamachiq wasi.' } },
+    { id: 'muni_cayma', lat: -16.38175, lon: -71.54525, name: { es: 'Municipalidad de Cayma', en: 'Cayma Municipality', qu: 'Cayma Munisipyu' }, desc: { es: 'Gobierno distrital.', en: 'District government.', qu: 'Distrito kamachiq wasi.' } },
+    { id: 'muni_paucarpata', lat: -16.431047, lon: -71.503464, name: { es: 'Municipalidad de Paucarpata', en: 'Paucarpata Municipality', qu: 'Paucarpata Munisipyu' }, desc: { es: 'Gobierno distrital.', en: 'District government.', qu: 'Distrito kamachiq wasi.' } },
+    { id: 'muni_yanahuara', lat: -16.389412, lon: -71.544294, name: { es: 'Municipalidad de Yanahuara', en: 'Yanahuara Municipality', qu: 'Yanahuara Munisipyu' }, desc: { es: 'Gobierno distrital.', en: 'District government.', qu: 'Distrito kamachiq wasi.' } },
+    { id: 'muni_miraflores', lat: -16.394169, lon: -71.522283, name: { es: 'Municipalidad de Miraflores', en: 'Miraflores Municipality', qu: 'Miraflores Munisipyu' }, desc: { es: 'Gobierno distrital.', en: 'District government.', qu: 'Distrito kamachiq wasi.' } },
+    { id: 'muni_melgar', lat: -16.40335, lon: -71.50898, name: { es: 'Municipalidad de Mariano Melgar', en: 'Mariano Melgar Municipality', qu: 'Mariano Melgar Munisipyu' }, desc: { es: 'Gobierno distrital.', en: 'District government.', qu: 'Distrito kamachiq wasi.' } },
+    { id: 'muni_hunter', lat: -16.44158, lon: -71.55828, name: { es: 'Municipalidad de Hunter', en: 'Hunter Municipality', qu: 'Hunter Munisipyu' }, desc: { es: 'Gobierno distrital.', en: 'District government.', qu: 'Distrito kamachiq wasi.' } },
+    { id: 'muni_socabaya', lat: -16.46755, lon: -71.52848, name: { es: 'Municipalidad de Socabaya', en: 'Socabaya Municipality', qu: 'Socabaya Munisipyu' }, desc: { es: 'Gobierno distrital.', en: 'District government.', qu: 'Distrito kamachiq wasi.' } },
+    { id: 'muni_sachaca', lat: -16.42163, lon: -71.56431, name: { es: 'Municipalidad de Sachaca', en: 'Sachaca Municipality', qu: 'Sachaca Munisipyu' }, desc: { es: 'Gobierno distrital.', en: 'District government.', qu: 'Distrito kamachiq wasi.' } },
+    { id: 'muni_selva_alegre', lat: -16.37973, lon: -71.52081, name: { es: 'Municipalidad de Alto Selva Alegre', en: 'Alto Selva Alegre Municipality', qu: 'Alto Selva Alegre Munisipyu' }, desc: { es: 'Gobierno distrital.', en: 'District government.', qu: 'Distrito kamachiq wasi.' } },
+    { id: 'muni_characato', lat: -16.46858, lon: -71.48468, name: { es: 'Municipalidad de Characato', en: 'Characato Municipality', qu: 'Characato Munisipyu' }, desc: { es: 'Gobierno distrital.', en: 'District government.', qu: 'Distrito kamachiq wasi.' } },
+    { id: 'muni_jlbyr', lat: -16.42648, lon: -71.5238, name: { es: 'Municipalidad de JLByR', en: 'JLByR Municipality', qu: 'JLByR Munisipyu' }, desc: { es: 'José Luis Bustamante y Rivero.', en: 'José Luis Bustamante y Rivero.', qu: 'José Luis Bustamante y Rivero.' } }
+  ],
+  police: [
+    { id: 'comisaria_yanahuara', lat: -16.391439, lon: -71.542881, name: { es: 'Comisaría de Yanahuara', en: 'Yanahuara Police Station', qu: 'Yanahuara Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
+    { id: 'comisaria_paucarpata', lat: -16.432114, lon: -71.506554, name: { es: 'Comisaría de Paucarpata', en: 'Paucarpata Police Station', qu: 'Paucarpata Chapati Wasi' }, desc: { es: 'Atención de emergencias.', en: 'Emergency response.', qu: 'Yanapay.' } },
+    { id: 'palacio_policia', lat: -16.40084, lon: -71.53662, name: { es: 'PNP Palacio Viejo', en: 'Palacio Viejo Police', qu: 'Chapati Wasin' }, desc: { es: 'Sede de la Región Policial Arequipa.', en: 'Arequipa Police Region headquarters.', qu: 'Arequipa Chapati Wasi.' } },
+    { id: 'comisaria_miraflores', lat: -16.39493, lon: -71.52386, name: { es: 'Comisaría de Miraflores', en: 'Miraflores Police Station', qu: 'Miraflores Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
+    { id: 'comisaria_melgar', lat: -16.39933, lon: -71.50666, name: { es: 'Comisaría de Mariano Melgar', en: 'Mariano Melgar Police Station', qu: 'Mariano Melgar Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
+    { id: 'comisaria_hunter', lat: -16.44146, lon: -71.55487, name: { es: 'Comisaría de Hunter', en: 'Hunter Police Station', qu: 'Hunter Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
+    { id: 'comisaria_socabaya', lat: -16.47218, lon: -71.52823, name: { es: 'Comisaría de Socabaya', en: 'Socabaya Police Station', qu: 'Socabaya Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
+    { id: 'comisaria_sachaca', lat: -16.4245, lon: -71.567, name: { es: 'Comisaría de Sachaca', en: 'Sachaca Police Station', qu: 'Sachaca Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
+    { id: 'comisaria_selva_alegre', lat: -16.382, lon: -71.532, name: { es: 'Comisaría de Alto Selva Alegre', en: 'Alto Selva Alegre Police Station', qu: 'Alto Selva Alegre Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
+    { id: 'comisaria_characato', lat: -16.465, lon: -71.484, name: { es: 'Comisaría de Characato', en: 'Characato Police Station', qu: 'Characato Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
+    { id: 'comisaria_jlbyr', lat: -16.42432, lon: -71.52941, name: { es: 'Comisaría de JLByR', en: 'JLByR Police Station', qu: 'JLByR Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } }
+  ]
+};
+
+function updateAllLayers() {
+  layerHistory.clearLayers(); layerHospitals.clearLayers(); layerMunicipalities.clearLayers(); layerPolice.clearLayers();
+  POI_DATA.history.forEach(p => { const icon = L.divIcon({ className: 'custom-icon', html: `<div style="background:#d4af37; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.4);">🏛️</div>`, iconSize: [32, 32], iconAnchor: [16, 16] }); const name = p.name[currentLang] || p.name['es']; L.marker([p.lat, p.lon], { icon }).bindPopup(`<b>${name}</b><br><small>Haz clic para escuchar a Misti 🦁</small>`).on('click', () => showMascotInfo(p)).addTo(layerHistory); });
+  POI_DATA.hospital.forEach(p => { const icon = L.divIcon({ className: 'custom-icon', html: `<div style="background:#e53935; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.4);">🏥</div>`, iconSize: [32, 32], iconAnchor: [16, 16] }); const name = p.name[currentLang] || p.name['es']; L.marker([p.lat, p.lon], { icon }).bindPopup(`<b>${name}</b>`).addTo(layerHospitals); });
+  POI_DATA.muni.forEach(p => { const icon = L.divIcon({ className: 'custom-icon', html: `<div style="background:#1976d2; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.4);">🏢</div>`, iconSize: [32, 32], iconAnchor: [16, 16] }); const name = p.name[currentLang] || p.name['es']; L.marker([p.lat, p.lon], { icon }).bindPopup(`<b>${name}</b>`).addTo(layerMunicipalities); });
+  POI_DATA.police.forEach(p => { const icon = L.divIcon({ className: 'custom-icon', html: `<div style="background:#1e293b; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.4);">🚓</div>`, iconSize: [32, 32], iconAnchor: [16, 16] }); const name = p.name[currentLang] || p.name['es']; L.marker([p.lat, p.lon], { icon }).bindPopup(`<b>${name}</b>`).addTo(layerPolice); });
+  if (activeLayers.history) layerHistory.addTo(map); else map.removeLayer(layerHistory);
+  if (activeLayers.hospital) layerHospitals.addTo(map); else map.removeLayer(layerHospitals);
+  if (activeLayers.muni) layerMunicipalities.addTo(map); else map.removeLayer(layerMunicipalities);
+  if (activeLayers.police) layerPolice.addTo(map); else map.removeLayer(layerPolice);
+  if($('toggle-hist')) $('toggle-hist').checked = activeLayers.history;
+  if($('toggle-hosp')) $('toggle-hosp').checked = activeLayers.hospital;
+  if($('toggle-muni')) $('toggle-muni').checked = activeLayers.muni;
+  if($('toggle-police')) $('toggle-police').checked = activeLayers.police;
+}
+
+window.toggleLayer = function(layerName, val) {
+  activeLayers[layerName] = val;
+  localStorage.setItem('sit_layers', JSON.stringify(activeLayers));
+  updateAllLayers();
+};
+
+// ==========================================
+// MASCOTA MISTI
+// ==========================================
+window.toggleMascotCard = function() {
+  const card = $('mascot-card');
+  if (card.style.display === 'block') { card.style.display = 'none'; } else { card.style.display = 'block'; $('mascot-title').textContent = "¡Hola, soy Misti!"; $('mascot-desc').textContent = "Activa los lugares de interés en Ajustes (⚙️) y te contaré historias y datos curiosos de Arequipa mientras viajas. ¡Sígueme!"; }
+};
+
+function showMascotInfo(place) {
+  const card = $('mascot-card');
+  const name = place.name[currentLang] || place.name['es'];
+  const desc = place.desc[currentLang] || place.desc['es'];
+  $('mascot-title').textContent = `Te cuento sobre: ${name}`;
+  $('mascot-desc').textContent = desc;
+  card.style.display = 'block';
+}
+
+let visitedHistory = new Set();
+function checkHistoryProximity(lat, lng) {
+  if (!activeLayers.history) return;
+  POI_DATA.history.forEach(place => {
+    if (visitedHistory.has(place.id)) return; 
+    const dist = getDistance(lat, lng, place.lat, place.lon);
+    if (dist < 200) { visitedHistory.add(place.id); showMascotInfo(place); }
+  });
+}
+
+// ==========================================
+// LÓGICA PRINCIPAL Y MAPA
+// ==========================================
+const map = L.map('map', { zoomControl: false }).setView([-16.409, -71.537], 13);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+applyTheme(currentTheme);
+applyFontSize(currentFont);
+
+const iconWalk = L.divIcon({ className: 'custom-user-icon', html: '<div style="background:#1976d2; color:white; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-size:18px; border:3px solid white; box-shadow:0 3px 8px rgba(0,0,0,0.4);">🚶</div>', iconSize: [34, 34], iconAnchor: [17, 17] });
+const iconBus = L.divIcon({ className: 'custom-user-icon', html: '<div style="background:#e53935; color:white; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-size:18px; border:3px solid white; box-shadow:0 3px 8px rgba(0,0,0,0.4);">🚌</div>', iconSize: [34, 34], iconAnchor: [17, 17] });
+
+const EMPRESA_COLORS = {};
+const EMPRESA_PALETTE = ['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4','#46f0f0','#f032e6','#9a6324','#800000','#808000','#000075','#e6beff','#008080','#ff7f50','#1e90ff','#bcf60c'];
+
+function getOperatorColor(opName) {
+  const name = opName.toLowerCase();
+  if (name.includes('integra')) return '#c6ff00';
+  if (name.includes('cono norte')) return '#9e9e9e';
+  if (name.includes('transcayma')) return '#ffeb3b';
+  if (name.includes('unión aqp') || name.includes('union aqp')) return '#ff9800';
+  if (name.includes('etrabus')) return '#f44336';
+  if (name.includes('unión grau') || name.includes('union grau')) return '#8d6e63';
+  if (name.includes('aqp masivo')) return '#795548';
+  if (name.includes('characato')) return '#00bcd4';
+  if (name.includes('emarsistran')) return '#2196f3';
+  if (name.includes('megabus')) return '#9c27b0';
+  if (name.includes('cotum')) return '#4caf50';
+  if (!EMPRESA_COLORS[opName]) EMPRESA_COLORS[opName] = EMPRESA_PALETTE[Object.keys(EMPRESA_COLORS).length % EMPRESA_PALETTE.length];
+  return EMPRESA_COLORS[opName];
+}
+
+const routesLayer = L.layerGroup().addTo(map);
+const stopsLayer  = L.layerGroup().addTo(map);
+const plannerLayer = L.layerGroup().addTo(map);
+const state = { stops: new Map(), trips: [], routes: new Map(), routeLayers: new Map() };
+const $ = id => document.getElementById(id);
+
+function showToast(msg, type = 'success') {
+  const container = $('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  let icon = '✅'; if(type === 'error') icon = '❌'; if(type === 'wait') icon = '⏳';
+  toast.innerHTML = `<span>${icon}</span> <span>${msg}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => toast.classList.add('show'), 10);
+  setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
+}
+
+function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+window.toggleSettings = function() {
+  const modal = $('settings-modal');
+  if (modal.style.display === 'flex') modal.style.display = 'none';
+  else { $('select-lang').value = currentLang; $('select-theme').value = currentTheme; $('select-font').value = currentFont; modal.style.display = 'flex'; }
+};
+
+window.centrarGPS = function() {
+  if (navigator.geolocation) {
+    showToast('Obteniendo ubicación...', 'wait');
+    navigator.geolocation.getCurrentPosition((pos) => { map.flyTo([pos.coords.latitude, pos.coords.longitude], 16); showToast('Ubicación encontrada', 'success'); }, (err) => { showToast('No se pudo obtener la ubicación', 'error'); }, { enableHighAccuracy: true });
+  } else { showToast('GPS no soportado', 'error'); }
+};
+
+// FAVORITOS
+const defaultFavs = [ { id: 'casa', name: dict[currentLang].fav_casa, icon: '🏠', lat: null, lng: null }, { id: 'trabajo', name: dict[currentLang].fav_trabajo, icon: '💼', lat: null, lng: null }, { id: 'escuela', name: dict[currentLang].fav_escuela, icon: '🏫', lat: null, lng: null } ];
+let favoritos = [...defaultFavs];
+let savedFavs = JSON.parse(localStorage.getItem('sit_favs')) || [];
+savedFavs.forEach(sf => { const def = favoritos.find(f => f.id === sf.id); if (def) { def.lat = sf.lat; def.lng = sf.lng; } else { favoritos.push(sf); } });
+let settingFav = null;
+
+function renderFavoritos() {
+  const cont = $('fav-container'); cont.innerHTML = '';
+  favoritos.forEach(fav => {
+    const btn = document.createElement('div'); btn.className = 'fav-btn';
+    let editBtn = `<div class="fav-edit" onclick="event.stopPropagation(); configurarFavorito('${fav.id}')" title="Cambiar ubicación">📍</div>`;
+    let deleteBtn = `<div class="fav-delete" onclick="eliminarFavorito('${fav.id}', event)" title="Eliminar">🗑️</div>`;
+    btn.innerHTML = `${deleteBtn}${editBtn}<div class="icon">${fav.icon}</div><div class="name">${escapeHtml(fav.name)}</div>`;
+    btn.addEventListener('click', () => { if (fav.lat && fav.lng) { const latlng = L.latLng(fav.lat, fav.lng); if ($('plan-step-1').style.display !== 'none') setPuntoA(latlng, fav.name); else if ($('plan-step-2').style.display !== 'none') setPuntoB(latlng, fav.name); else { setPuntoB(latlng, fav.name); calcularRutasPlanner(); } map.flyTo(latlng, 16); } else configurarFavorito(fav.id); });
+    cont.appendChild(btn);
+  });
+  const addBtn = document.createElement('div'); addBtn.className = 'fav-btn'; addBtn.style.borderStyle = 'dashed';
+  addBtn.innerHTML = `<div class="icon">➕</div><div class="name">Añadir</div>`;
+  addBtn.addEventListener('click', abrirModalFavoritos);
+  cont.appendChild(addBtn);
+}
+
+window.configurarFavorito = function(id) { settingFav = id; const fav = favoritos.find(f => f.id === id); showToast(`Haz clic en el mapa para ubicar: ${fav.icon} ${fav.name}`, 'wait'); };
+
+window.eliminarFavorito = function(id, event) {
+  if(event) event.stopPropagation();
+  const isDefault = ['casa', 'trabajo', 'escuela'].includes(id);
+  if (isDefault) { if(confirm('¿Quieres borrar la ubicación guardada de este favorito?')) { const fav = favoritos.find(f => f.id === id); if(fav) { fav.lat = null; fav.lng = null; } localStorage.setItem('sit_favs', JSON.stringify(favoritos)); renderFavoritos(); showToast('Ubicación borrada', 'success'); } }
+  else { if(confirm('¿Seguro que deseas eliminar este favorito?')) { favoritos = favoritos.filter(f => f.id !== id); localStorage.setItem('sit_favs', JSON.stringify(favoritos)); renderFavoritos(); showToast('Favorito eliminado', 'success'); } }
+};
+
+const PREDEFINED = [ { icon: '🛒', name: 'Supermercado' }, { icon: '🏋️', name: 'Gimnasio' }, { icon: '🏥', name: 'Hospital' }, { icon: '💊', name: 'Farmacia' }, { icon: '🏦', name: 'Banco' }, { icon: '🌳', name: 'Parque' }, { icon: '🍔', name: 'Restaurante' }, { icon: '☕', name: 'Cafetería' }, { icon: '🎓', name: 'Universidad' }, { icon: '🐶', name: 'Veterinaria' }, { icon: '⛪', name: 'Iglesia' }, { icon: '🚉', name: 'Terminal' } ];
+
+window.abrirModalFavoritos = function() {
+  const grid = $('predefined-favs'); grid.innerHTML = '';
+  PREDEFINED.forEach(p => { if (favoritos.some(f => f.name.toLowerCase() === p.name.toLowerCase())) return; const btn = document.createElement('div'); btn.className = 'pred-btn'; btn.innerHTML = `<div class="icon">${p.icon}</div><div class="name">${p.name}</div>`; btn.onclick = () => { agregarNuevoFavorito(p.name, p.icon); $('add-fav-modal').style.display = 'none'; }; grid.appendChild(btn); });
+  if (grid.children.length === 0) grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#64748b; font-size:13px;">Ya has agregado todos.</p>';
+  $('add-fav-modal').style.display = 'flex';
+};
+
+window.agregarNuevoFavorito = function(name, icon) { const newFav = { id: Date.now().toString(), name: name, icon: icon, lat: null, lng: null }; favoritos.push(newFav); localStorage.setItem('sit_favs', JSON.stringify(favoritos)); renderFavoritos(); configurarFavorito(newFav.id); };
+window.agregarFavoritoPersonalizado = function() { $('add-fav-modal').style.display = 'none'; const name = prompt("Nombre del lugar:"); if (!name) return; const icon = prompt("Icono (ej. 🏋️):", "⭐"); agregarNuevoFavorito(name, icon || "⭐"); };
+
+// BUSCADOR
+let searchTimeout = null, searchMarker = null, searchLatLng = null, searchName = "";
+$('search-input').addEventListener('input', function(e) {
+  const q = e.target.value;
+  if (q.length < 3) { $('search-results').style.display = 'none'; return; }
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(async () => {
+    const viewbox = '-71.65,-16.25,-71.45,-16.55'; 
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&viewbox=${viewbox}&bounded=1&limit=5`, { headers: { 'Accept-Language': 'es' } });
+      const data = await res.json();
+      const resultsDiv = $('search-results'); resultsDiv.innerHTML = '';
+      if (data.length === 0) resultsDiv.innerHTML = '<div class="search-item">No se encontraron resultados.</div>';
+      else { data.forEach(item => { const div = document.createElement('div'); div.className = 'search-item'; div.textContent = item.display_name; div.addEventListener('click', () => { searchLatLng = L.latLng(item.lat, item.lon); searchName = item.display_name.split(',')[0]; map.flyTo(searchLatLng, 16, { duration: 1.5 }); if (searchMarker) map.removeLayer(searchMarker); searchMarker = L.marker(searchLatLng).addTo(map).bindPopup(`<div style="text-align:center; font-family:Inter,sans-serif;"><b style="display:block; margin-bottom:8px; font-size:14px;">${escapeHtml(searchName)}</b><button onclick="setFromSearch('A')" style="background:#2e7d32; color:white; border:none; padding:8px; margin-bottom:4px; border-radius:6px; width:100%; cursor:pointer; font-weight:bold;">Marcar Origen (A)</button><button onclick="setFromSearch('B')" style="background:#c62828; color:white; border:none; padding:8px; border-radius:6px; width:100%; cursor:pointer; font-weight:bold;">Marcar Destino (B)</button></div>`).openPopup(); $('search-results').style.display = 'none'; $('search-input').value = ''; }); resultsDiv.appendChild(div); }); }
+      resultsDiv.style.display = 'block';
+    } catch(e) { console.warn("Error buscando lugar"); }
+  }, 500);
+});
+window.setFromSearch = function(type) { if (!searchLatLng) return; if (type === 'A') setPuntoA(searchLatLng, searchName); else setPuntoB(searchLatLng, searchName); map.closePopup(); if (searchMarker) map.removeLayer(searchMarker); };
+document.addEventListener('click', (e) => { if (!e.target.closest('.search-box')) $('search-results').style.display = 'none'; });
+
+// INDEXEDDB
+function openDB() { return new Promise((res, rej) => { const req = indexedDB.open('SIT_AQP_DB', 1); req.onupgradeneeded = e => e.target.result.createObjectStore('files'); req.onsuccess = e => res(e.target.result); req.onerror = e => rej(e.target.error); }); }
+async function saveDataToDB(json) { const db = await openDB(); const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').put(json, 'osm_json'); return new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); }
+async function loadDataFromDB() { const db = await openDB(); const tx = db.transaction('files', 'readonly'); const req = tx.objectStore('files').get('osm_json'); return new Promise(res => req.onsuccess = () => res(req.result)); }
+async function clearDB() { const db = await openDB(); const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').delete('osm_json'); return new Promise(res => tx.oncomplete = res); }
+
+async function init() {
+  applyLanguage(currentLang);
+  renderFavoritos();
+  updateAllLayers(); 
+  try { const savedJson = await loadDataFromDB(); if (savedJson) { showToast('Cargando datos...', 'wait'); await new Promise(r => setTimeout(r, 100)); procesar(JSON.parse(savedJson)); return; } } catch(e) { }
+  showToast('No hay datos. Sube un archivo JSON.', 'error'); cargarDatosEstaticos();
+}
+
+async function procesar(data) {
+  try {
+    state.stops.clear(); state.trips = []; state.routes.clear();
+    try { await saveDataToDB(JSON.stringify(data)); } catch(e) { }
+    for (const el of data.elements) { if (el.type === 'node' && el.tags && el.tags.highway === 'bus_stop') state.stops.set('N' + el.id, { id: 'N' + el.id, name: (el.tags.name || 'Paradero').trim(), lat: el.lat, lon: el.lon, used: false }); }
+    let ci = 0;
+    for (const el of data.elements) { if (el.type !== 'relation') continue; const t = el.tags || {}; if (t.type !== 'route' || !el.members) continue; const pts = unirTrazado(el.members); if (pts.length < 2) continue; const ref = (t.ref || t.name || ('R' + el.id)).toString().trim(); const operator = (t.operator || t.network || 'Otras Empresas').trim(); const operatorColor = getOperatorColor(operator); const routeMapColor = EMPRESA_PALETTE[ci % EMPRESA_PALETTE.length]; ci++; const longName = (t.name || t.description || '').trim(); const from = (t.from || '').trim(); const to = (t.to || '').trim(); let desc = longName; if (!desc && (from || to)) desc = `${from} - ${to}`; state.trips.push({ id: 'T' + el.id, osmId: el.id, routeRef: ref, routeName: desc, operator: operator, from: from, to: to, headsign: (to || longName || ref).trim(), points: pts, stopIds: [], directionId: 0, color: routeMapColor, operatorColor: operatorColor }); }
+    if (state.trips.length === 0) { showToast('Archivo sin rutas válidas.', 'error'); return; }
+    for (const trip of state.trips) { if (!state.routes.has(trip.routeRef)) state.routes.set(trip.routeRef, { ref: trip.routeRef, name: trip.routeName, operator: trip.operator, color: trip.color, operatorColor: trip.operatorColor, trips: [] }); state.routes.get(trip.routeRef).trips.push(trip); }
+    for (const r of state.routes.values()) { r.trips.sort((a, b) => a.osmId - b.osmId); r.trips.forEach((tr, i) => tr.directionId = i % 2); }
+    if (state.stops.size > 0) { construirGridParaderos(); for (const trip of state.trips) { if (trip.stopIds.length === 0) trip.stopIds = asociarParaderos(trip); } }
+    dibujar(); construirPanel(); $('btnGTFS').disabled = false; 
+    showToast(`¡Listo! ${state.routes.size} rutas cargadas.`, 'success');
+  } catch (err) { showToast('Error al procesar: ' + err.message, 'error'); }
+}
+
+function unirTrazado(members) { const skip = new Set(['platform','platform_entry_only','platform_exit_only','stop','stop_entry_only','stop_exit_only']); const ways = members.filter(m => m.type === 'way' && Array.isArray(m.geometry) && m.geometry.length && !skip.has(m.role || '')); const out = []; for (const w of ways) { let g = w.geometry.map(p => [p.lat, p.lon]); if (!out.length) { out.push(...g); continue; } const last = out[out.length - 1]; const dFirst = Math.hypot(last[0] - g[0][0], last[1] - g[0][1]); const dLast = Math.hypot(last[0] - g[g.length-1][0], last[1] - g[g.length-1][1]); if (dLast < dFirst) g = g.reverse(); if (Math.hypot(out[out.length-1][0] - g[0][0], out[out.length-1][1] - g[0][1]) < 1e-7) g.shift(); out.push(...g); } return out; }
+
+const CELL = 0.001, UMBRAL = 0.00045; let stopGrid = new Map();
+function construirGridParaderos() { stopGrid = new Map(); for (const s of state.stops.values()) { const k = Math.floor(s.lat / CELL) + ',' + Math.floor(s.lon / CELL); if (!stopGrid.has(k)) stopGrid.set(k, []); stopGrid.get(k).push(s.id); } }
+function asociarParaderos(trip) { const best = new Map(); const pts = trip.points; for (let i = 0; i < pts.length; i += 3) { const [lat, lon] = pts[i]; const cLat = Math.floor(lat / CELL), cLon = Math.floor(lon / CELL); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const arr = stopGrid.get((cLat+dy) + ',' + (cLon+dx)); if (!arr) continue; for (const sid of arr) { const s = state.stops.get(sid); const d = Math.hypot(s.lat - lat, s.lon - lon); if (d > UMBRAL) continue; const prev = best.get(sid); if (!prev || d < prev.dist) best.set(sid, {dist: d, index: i}); } } } const list = [...best.entries()].map(([sid, v]) => ({sid, ...v})); list.sort((a, b) => a.index - b.index); const ids = []; for (const it of list) { ids.push(it.sid); state.stops.get(it.sid).used = true; } return ids; }
+
+function getArrowDecorator(polyline, color) { if (typeof L.Symbol === 'undefined' || typeof L.Symbol.arrowHead === 'undefined') return L.layerGroup(); return L.polylineDecorator(polyline, { patterns: [{ offset: '10%', repeat: '50px', symbol: L.Symbol.arrowHead({ pixelSize: 8, polygon: false, pathOptions: { stroke: true, color: color, weight: 2 } }) }] }); }
+
+function dibujar() {
+  routesLayer.clearLayers(); stopsLayer.clearLayers();
+  for (const route of state.routes.values()) { const g = L.layerGroup(); for (const trip of route.trips) { const line = L.polyline(trip.points, { color: route.color, weight: 4, opacity: 0.6, dashArray: trip.directionId === 1 ? '8 6' : null }).bindPopup(`<b>${escapeHtml(route.ref)}</b> ${escapeHtml(trip.routeName)}`); g.addLayer(line); g.addLayer(getArrowDecorator(line, route.color)); } state.routeLayers.set(route.ref, g); routesLayer.addLayer(g); }
+  for (const s of state.stops.values()) { if (!s.used) continue; L.circleMarker([s.lat, s.lon], { radius: 3, weight: 1, color: '#7f0000', fillColor: '#e53935', fillOpacity: 0.9 }).bindPopup(`<b>${escapeHtml(s.name)}</b>`).addTo(stopsLayer); }
+}
+
+function construirPanel() {
+  const cont = $('rutas-container'); cont.innerHTML = '';
+  const empresas = {}; for (const r of state.routes.values()) { const op = r.operator || 'Otras Empresas'; if (!empresas[op]) empresas[op] = { rutas: [], color: r.operatorColor }; empresas[op].rutas.push(r); }
+  Object.keys(empresas).sort().forEach((opName, index) => { const data = empresas[opName]; const rutas = data.rutas.sort((a,b) => a.ref.localeCompare(b.ref)); const groupDiv = document.createElement('div'); groupDiv.className = 'empresa-group'; const header = document.createElement('div'); header.className = 'empresa-header'; const masterCb = document.createElement('input'); masterCb.type = 'checkbox'; masterCb.checked = true; masterCb.style.width = '16px'; masterCb.style.height='16px'; masterCb.style.cursor='pointer'; const colorDot = document.createElement('span'); colorDot.className = 'empresa-color-dot'; colorDot.style.backgroundColor = data.color; const title = document.createElement('span'); title.textContent = `${opName} (${rutas.length})`; const arrow = document.createElement('span'); arrow.textContent = '▼'; arrow.style.marginLeft = 'auto'; arrow.style.fontSize = '12px'; header.append(masterCb, colorDot, title, arrow); const body = document.createElement('div'); body.className = 'empresa-body'; if (index === 0) body.classList.add('open'); header.addEventListener('click', (e) => { if (e.target !== masterCb) { body.classList.toggle('open'); arrow.textContent = body.classList.contains('open') ? '▼' : '▶'; } }); masterCb.addEventListener('change', () => { body.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = masterCb.checked; cb.dispatchEvent(new Event('change')); }); }); rutas.forEach(r => { const row = document.createElement('div'); row.className = 'ruta'; const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = true; cb.style.width='16px'; cb.style.height='16px'; cb.style.cursor='pointer'; const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = r.color; const name = document.createElement('span'); name.className = 'name'; name.innerHTML = `<span class="ref">${escapeHtml(r.ref)}</span><span class="desc">${escapeHtml(r.name || 'Ruta SIT')}</span>`; row.append(cb, sw, name); cb.addEventListener('change', () => { const g = state.routeLayers.get(r.ref); if (cb.checked) routesLayer.addLayer(g); else routesLayer.removeLayer(g); }); body.appendChild(row); }); groupDiv.append(header, body); cont.appendChild(groupDiv); });
+}
+window.toggleAll = function(mostrar) { document.querySelectorAll('#rutas-container input[type="checkbox"]').forEach(cb => cb.checked = mostrar); if (mostrar) { for (const g of state.routeLayers.values()) routesLayer.addLayer(g); } else { routesLayer.clearLayers(); } };
+
+// PLANIFICADOR
+let modoMapa = null; let puntoA = null, puntoB = null; let markerA = null, markerB = null;
+let textA = "Origen", textB = "Destino";
+
+function getIconA() { return L.divIcon({ className: 'custom-marker', html: `<div style="position:relative;width:28px;height:28px;"><div style="background:#2e7d32;width:28px;height:28px;border-radius:50%;color:white;text-align:center;line-height:28px;font-weight:bold;border:3px solid white;box-shadow:0 3px 8px rgba(0,0,0,0.4); font-family:Inter;">A</div><div onclick="borrarPuntoA(event)" class="delete-marker-btn">X</div></div>`, iconSize: [28, 28], iconAnchor: [14, 14] }); }
+function getIconB() { return L.divIcon({ className: 'custom-marker', html: `<div style="position:relative;width:28px;height:28px;"><div style="background:#c62828;width:28px;height:28px;border-radius:50%;color:white;text-align:center;line-height:28px;font-weight:bold;border:3px solid white;box-shadow:0 3px 8px rgba(0,0,0,0.4); font-family:Inter;">B</div><div onclick="borrarPuntoB(event)" class="delete-marker-btn">X</div></div>`, iconSize: [28, 28], iconAnchor: [14, 14] }); }
+
+window.setPuntoA = function(latlng, name) { puntoA = latlng; textA = name || dict[currentLang].enter_origin; if (markerA) map.removeLayer(markerA); markerA = L.marker(puntoA, {icon: getIconA()}).addTo(map); $('btn-set-a').classList.remove('active'); $('btn-set-a').textContent = dict[currentLang].point_a_marked; $('text-a').innerHTML = `<b>${escapeHtml(textA)}</b>`; $('text-a-set').innerHTML = `<b>${escapeHtml(textA)}</b>`; $('text-a-final').innerHTML = escapeHtml(textA); $('plan-step-1').style.display = 'none'; $('plan-step-2').style.display = 'block'; modoMapa = null; };
+window.setPuntoB = function(latlng, name) { puntoB = latlng; textB = name || dict[currentLang].enter_dest; if (markerB) map.removeLayer(markerB); markerB = L.marker(puntoB, {icon: getIconB()}).addTo(map); $('btn-set-b').classList.remove('active'); $('btn-set-b').textContent = 'Punto B Marcado'; $('text-b').innerHTML = `<b>${escapeHtml(textB)}</b>`; $('text-b-final').innerHTML = escapeHtml(textB); $('plan-step-2').style.display = 'none'; $('plan-step-3').style.display = 'block'; modoMapa = null; };
+map.on('click', function(e) { if (settingFav) { const fav = favoritos.find(f => f.id === settingFav); fav.lat = e.latlng.lat; fav.lng = e.latlng.lng; localStorage.setItem('sit_favs', JSON.stringify(favoritos)); renderFavoritos(); showToast(`¡Favorito ${fav.name} guardado!`, 'success'); settingFav = null; return; } if (!modoMapa) return; if (modoMapa === 'A') setPuntoA(e.latlng, "Punto en el mapa"); else setPuntoB(e.latlng, "Punto en el mapa"); });
+window.activarModoMapa = function(modo) { modoMapa = modo; if (modo === 'A') { $('btn-set-a').classList.add('active'); $('btn-set-a').textContent = 'Haz clic en el mapa...'; } else { $('btn-set-b').classList.add('active'); $('btn-set-b').textContent = 'Haz clic en el mapa...'; } };
+window.borrarPuntoA = function(e) { if(e) e.stopPropagation(); puntoA = null; if (markerA) map.removeLayer(markerA); plannerLayer.clearLayers(); $('plan-step-1').style.display = 'block'; $('plan-step-2').style.display = 'none'; $('plan-step-3').style.display = 'none'; $('plan-results').innerHTML = ''; };
+window.borrarPuntoB = function(e) { if(e) e.stopPropagation(); puntoB = null; if (markerB) map.removeLayer(markerB); plannerLayer.clearLayers(); $('plan-step-2').style.display = 'block'; $('plan-step-3').style.display = 'none'; $('plan-results').innerHTML = ''; };
+window.limpiarPlanificador = function() { borrarPuntoA(); borrarPuntoB(); };
+window.intercambiarPuntos = function() { if (!puntoA || !puntoB) return; const temp = puntoA; puntoA = puntoB; puntoB = temp; const tempT = textA; textA = textB; textB = tempT; if (markerA) map.removeLayer(markerA); if (markerB) map.removeLayer(markerB); markerA = L.marker(puntoA, {icon: getIconA()}).addTo(map); markerB = L.marker(puntoB, {icon: getIconB()}).addTo(map); $('text-a').innerHTML = `<b>${escapeHtml(textA)}</b>`; $('text-a-set').innerHTML = `<b>${escapeHtml(textA)}</b>`; $('text-a-final').innerHTML = escapeHtml(textA); $('text-b').innerHTML = `<b>${escapeHtml(textB)}</b>`; $('text-b-final').innerHTML = escapeHtml(textB); if ($('plan-results').innerHTML !== '') calcularRutasPlanner(); };
+
+function getDistance(lat1, lon1, lat2, lon2) { const R = 6371e3; const p1 = lat1 * Math.PI/180, p2 = lat2 * Math.PI/180; const dp = (lat2-lat1) * Math.PI/180, dl = (lon2-lon1) * Math.PI/180; const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2); return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); }
+function getClosestPointOnPolyline(p, polyline) { let minDist = Infinity, closestPoint = null, closestIndex = -1; for (let i = 0; i < polyline.length; i++) { const pt = polyline[i]; const d = getDistance(p.lat, p.lng, pt[0], pt[1]); if (d < minDist) { minDist = d; closestPoint = {lat: pt[0], lng: pt[1]}; closestIndex = i; } } return { ...closestPoint, index: closestIndex, distance: minDist }; }
+
+window.calcularRutasPlanner = function() {
+  if (!puntoA || !puntoB) return;
+  plannerLayer.clearLayers(); const resultsContainer = $('plan-results'); resultsContainer.innerHTML = '<p style="text-align:center; color:#666;">Calculando...</p>';
+  setTimeout(() => {
+    const RADIO = 500; const rutasCercaA = [], rutasCercaB = [];
+    for (const trip of state.trips) { if (trip.points.length < 2) continue; const snapA = getClosestPointOnPolyline(puntoA, trip.points); if (snapA.distance <= RADIO) rutasCercaA.push({ trip, snapA }); const snapB = getClosestPointOnPolyline(puntoB, trip.points); if (snapB.distance <= RADIO) rutasCercaB.push({ trip, snapB }); }
+    const resultados = [];
+    for (const rA of rutasCercaA) { const matchB = rutasCercaB.find(rB => rB.trip.id === rA.trip.id); if (matchB && rA.snapA.index < matchB.snapB.index) { resultados.push({ tipo: 0, tramos: [{ trip: rA.trip, subida: rA.snapA, bajada: matchB.snapB }], caminata: rA.snapA.distance + matchB.snapB.distance, score: (rA.snapA.distance + matchB.snapB.distance) + (getDistance(rA.snapA.lat, rA.snapA.lng, matchB.snapB.lat, matchB.snapB.lng) * 0.05) }); } }
+    if (resultados.length < 3) { for (const rA of rutasCercaA) { for (const rB of rutasCercaB) { if (rA.trip.id === rB.trip.id) continue; let minDist = Infinity, tA = null, tB = null; for (let i = rA.snapA.index; i < rA.trip.points.length; i += 5) { for (let j = 0; j < rB.snapB.index; j += 5) { const d = getDistance(rA.trip.points[i][0], rA.trip.points[i][1], rB.trip.points[j][0], rB.trip.points[j][1]); if (d < minDist) { minDist = d; tA = {lat: rA.trip.points[i][0], lng: rA.trip.points[i][1], index: i}; tB = {lat: rB.trip.points[j][0], lng: rB.trip.points[j][1], index: j}; } } } if (minDist < 300) { resultados.push({ tipo: 1, tramos: [{ trip: rA.trip, subida: rA.snapA, bajada: tA }, { trip: rB.trip, subida: tB, bajada: rB.snapB }], caminata: rA.snapA.distance + minDist + rB.snapB.distance, score: (rA.snapA.distance + minDist + rB.snapB.distance) + 500 }); } } } }
+    resultados.sort((a, b) => a.score - b.score); const mejores = []; const rutasVistas = new Set();
+    for (const r of resultados) { const key = r.tramos.map(t => t.trip.routeRef + '_' + t.trip.directionId).join('+'); if (!rutasVistas.has(key)) { mejores.push(r); rutasVistas.add(key); } if (mejores.length >= 6) break; }
+    resultsContainer.innerHTML = '';
+    if (mejores.length === 0) { resultsContainer.innerHTML = `<p style="color:red; text-align:center; font-size:12px;">${dict[currentLang].no_routes}</p>`; return; }
+    mejores.forEach((res, index) => { const card = document.createElement('div'); card.className = 'result-card'; card.id = 'card-'+index; let title = res.tipo === 0 ? `Ruta ${res.tramos[0].trip.routeRef}` : `${dict[currentLang].transfer}: ${res.tramos[0].trip.routeRef} + ${res.tramos[1].trip.routeRef}`; let timelineHTML = `<div class="timeline-item"><div class="t-icon start">A</div><div class="t-line"></div><div class="t-content">${escapeHtml(textA)}</div></div>`; res.tramos.forEach((tramo, i) => { const route = state.routes.get(tramo.trip.routeRef); timelineHTML += `<div class="timeline-item"><div class="t-icon walk">🚶</div><div class="t-line"></div><div class="t-content">${dict[currentLang].walk} <b>${i===0?tramo.subida.distance:getDistance(tramo.subida.lat,tramo.subida.lng,res.tramos[i-1].bajada.lat,res.tramos[i-1].bajada.lng)}m</b></div></div>`; timelineHTML += `<div class="timeline-item"><div class="t-icon bus" style="background:${route.color}">🚌</div><div class="t-line"></div><div class="t-content">${dict[currentLang].take_bus} <b style="color:${route.color}">${escapeHtml(route.ref)}</b> ${dict[currentLang].towards} ${escapeHtml(tramo.trip.headsign).substring(0,15)}...</div></div>`; if (i === res.tramos.length - 1) timelineHTML += `<div class="timeline-item"><div class="t-icon walk">🚶</div><div class="t-line"></div><div class="t-content">${dict[currentLang].get_off} <b>${tramo.bajada.distance}m</b></div></div>`; }); timelineHTML += `<div class="timeline-item"><div class="t-icon end">B</div><div class="t-content">${escapeHtml(textB)}</div></div>`; card.innerHTML = `<div class="result-header"><div class="result-title">${escapeHtml(title)}</div>${res.tipo === 1 ? `<div style="font-size:10px;color:#c62828;font-weight:bold;background:#fecaca;padding:2px 6px;border-radius:4px;">${dict[currentLang].transfer}</div>` : ''}</div><div class="timeline">${timelineHTML}</div><div class="card-actions"><button class="btn-action btn-start" onclick="iniciarNavegacion(${index})">${dict[currentLang].navigate} 🧭</button></div>`; card.addEventListener('click', (e) => { if(e.target.tagName !== 'BUTTON') dibujarRutaPlanner(res, index); }); window['rutaRes_'+index] = res; resultsContainer.appendChild(card); });
+  }, 50);
+};
+
+async function obtenerRutaCaminando(start, end) { const url = `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${start.lng},${start.lat};${end.lng},${end.lat}?geometries=geojson&overview=full`; try { const res = await fetch(url); const data = await res.json(); if (data.routes && data.routes[0]) return data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]); } catch(e) { } return [[start.lat, start.lng], [end.lat, end.lng]]; }
+async function dibujarRutaPlanner(res, index) { document.querySelectorAll('.result-card').forEach(c => c.classList.add('inactive')); const activeCard = $('card-'+index); if(activeCard) { activeCard.classList.remove('inactive'); activeCard.classList.add('active'); } plannerLayer.clearLayers(); const walkCoordsA = await obtenerRutaCaminando(puntoA, res.tramos[0].subida); L.polyline(walkCoordsA, { color: '#888', weight: 4, dashArray: '5 8' }).addTo(plannerLayer); L.circleMarker([res.tramos[0].subida.lat, res.tramos[0].subida.lng], {color: '#2e7d32', radius: 7, fillOpacity: 1}).addTo(plannerLayer); for (let i = 0; i < res.tramos.length; i++) { const tramo = res.tramos[i]; const segmentPoints = tramo.trip.points.slice(tramo.subida.index, tramo.bajada.index + 1); if(segmentPoints.length > 0) { segmentPoints.unshift([tramo.subida.lat, tramo.subida.lng]); segmentPoints.push([tramo.bajada.lat, tramo.bajada.lng]); const routeColor = state.routes.get(tramo.trip.routeRef).color; L.polyline(segmentPoints, { color: '#ffffff', weight: 10 }).addTo(plannerLayer); const busLine = L.polyline(segmentPoints, { color: routeColor, weight: 6 }).addTo(plannerLayer); if (typeof L.Symbol !== 'undefined') { plannerLayer.addLayer(L.polylineDecorator(busLine, { patterns: [{ offset: '20px', repeat: '60px', symbol: L.Symbol.arrowHead({ pixelSize: 10, polygon: false, pathOptions: { stroke: true, color: '#fff', weight: 2 } }) }] })); } } if (i < res.tramos.length - 1) { const nextTramo = res.tramos[i+1]; const walkTrans = await obtenerRutaCaminando(tramo.bajada, nextTramo.subida); L.polyline(walkTrans, { color: '#f57c00', weight: 4, dashArray: '5 8' }).addTo(plannerLayer); L.circleMarker([tramo.bajada.lat, tramo.bajada.lng], {color: '#f57c00', radius: 6, fillOpacity: 1}).addTo(plannerLayer); } } const lastTramo = res.tramos[res.tramos.length - 1]; const walkCoordsB = await obtenerRutaCaminando(lastTramo.bajada, puntoB); L.polyline(walkCoordsB, { color: '#888', weight: 4, dashArray: '5 8' }).addTo(plannerLayer); L.circleMarker([lastTramo.bajada.lat, lastTramo.bajada.lng], {color: '#c62828', radius: 7, fillOpacity: 1}).addTo(plannerLayer); const b = L.latLngBounds([puntoA, puntoB, [res.tramos[0].subida.lat, res.tramos[0].subida.lng], [lastTramo.bajada.lat, lastTramo.bajada.lng]]); map.fitBounds(b, {padding: [50, 50]}); }
+
+// NAVEGACIÓN Y SIMULACIÓN
+let watchId = null; let userMarker = null; let navActiveRes = null; let navStep = 0;
+window.iniciarNavegacion = function(index) { const res = window['rutaRes_'+index]; if (!res) return; navActiveRes = res; navStep = 0; visitedHistory.clear(); $('nav-hud').style.display = 'block'; $('nav-title').textContent = "Iniciando GPS..."; $('btn-confirm-step').style.display = 'none'; dibujarRutaPlanner(res, index); if (!navigator.geolocation || location.protocol === 'file:') { simularNavegacion(res); return; } watchId = navigator.geolocation.watchPosition((pos) => actualizarNavegacionGPS(pos.coords.latitude, pos.coords.longitude), (err) => { simularNavegacion(res); }, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }); };
+function actualizarNavegacionGPS(lat, lng) { if (!navActiveRes) return; if (!userMarker) userMarker = L.marker([lat, lng], {icon: iconWalk, zIndexOffset: 1000}).addTo(map); else userMarker.setLatLng([lat, lng]); checkHistoryProximity(lat, lng); const tramos = navActiveRes.tramos; if (navStep === 0 || navStep === 2) { const target = navStep === 0 ? tramos[0].subida : tramos[1].subida; const dist = getDistance(lat, lng, target.lat, target.lng); if (dist < 40) { $('nav-title').textContent = "Espera el bus"; $('nav-desc').textContent = `Sube a la ruta ${navStep === 0 ? tramos[0].trip.routeRef : tramos[1].trip.routeRef}.`; $('btn-confirm-step').style.display = 'block'; $('btn-confirm-step').textContent = 'Confirmar Subida'; userMarker.setIcon(iconBus); } else { $('nav-title').textContent = dict[currentLang].walk_to_stop; $('nav-desc').textContent = `Faltan ${dist}m para el punto de subida.`; userMarker.setIcon(iconWalk); } } else if (navStep === 1 || navStep === 3) { const tramoIdx = navStep === 1 ? 0 : 1; const target = tramos[tramoIdx].bajada; const dist = getDistance(lat, lng, target.lat, target.lng); $('nav-title').textContent = `En el bus (Ruta ${tramos[tramoIdx].trip.routeRef})`; $('nav-desc').textContent = `Faltan ${dist}m para bajar.`; $('btn-confirm-step').style.display = 'block'; $('btn-confirm-step').textContent = 'Confirmar Bajada'; userMarker.setIcon(iconBus); } else if (navStep === 4) { const dist = getDistance(lat, lng, puntoB.lat, puntoB.lng); if (dist < 40) { $('nav-title').textContent = dict[currentLang].arrived; $('nav-desc').textContent = dict[currentLang].arrived_desc; $('btn-confirm-step').style.display = 'none'; userMarker.setIcon(iconWalk); } else { $('nav-title').textContent = "Caminando al destino"; $('nav-desc').textContent = `Faltan ${dist}m.`; userMarker.setIcon(iconWalk); } } }
+window.confirmarPasoNavegacion = function() { if (!navActiveRes) return; const tramos = navActiveRes.tramos; if (navStep === 0) { navStep = 1; if(userMarker) userMarker.setIcon(iconBus); showToast('Has subido al bus', 'success'); } else if (navStep === 1) { navStep = tramos.length > 1 ? 2 : 4; if(userMarker) userMarker.setIcon(iconWalk); showToast('Has bajado del bus', 'success'); } else if (navStep === 2) { navStep = 3; if(userMarker) userMarker.setIcon(iconBus); showToast('Has subido al 2do bus', 'success'); } else if (navStep === 3) { navStep = 4; if(userMarker) userMarker.setIcon(iconWalk); showToast('Has bajado del 2do bus', 'success'); } $('btn-confirm-step').style.display = 'none'; };
+async function simularNavegacion(res) { $('nav-hud').style.display = 'block'; $('nav-title').textContent = "Modo Simulación"; $('btn-confirm-step').style.display = 'none'; if (!userMarker) userMarker = L.marker(puntoA, {icon: iconWalk, zIndexOffset: 1000}).addTo(map); else { userMarker.setLatLng(puntoA); userMarker.setIcon(iconWalk); } const tramos = res.tramos; $('nav-title').textContent = "Caminando al paradero"; const walk1 = await obtenerRutaCaminando(puntoA, tramos[0].subida); await animarRuta(walk1, "Caminando..."); $('nav-title').textContent = `Espera el bus (${tramos[0].trip.routeRef})`; await new Promise(r => setTimeout(r, 2000)); $('nav-title').textContent = `En el bus (${tramos[0].trip.routeRef})`; userMarker.setIcon(iconBus); const busSeg1 = tramos[0].trip.points.slice(tramos[0].subida.index, tramos[0].bajada.index + 1); busSeg1.unshift([tramos[0].subida.lat, tramos[0].subida.lng]); busSeg1.push([tramos[0].bajada.lat, tramos[0].bajada.lng]); await animarRuta(busSeg1, "Viajando..."); if (tramos.length > 1) { $('nav-title').textContent = "Caminando al transbordo"; userMarker.setIcon(iconWalk); const walkTrans = await obtenerRutaCaminando(tramos[0].bajada, tramos[1].subida); await animarRuta(walkTrans, "Caminando al transbordo..."); $('nav-title').textContent = `Espera el bus (${tramos[1].trip.routeRef})`; await new Promise(r => setTimeout(r, 2000)); $('nav-title').textContent = `En el bus (${tramos[1].trip.routeRef})`; userMarker.setIcon(iconBus); const busSeg2 = tramos[1].trip.points.slice(tramos[1].subida.index, tramos[1].bajada.index + 1); busSeg2.unshift([tramos[1].subida.lat, tramos[1].subida.lng]); busSeg2.push([tramos[1].bajada.lat, tramos[1].bajada.lng]); await animarRuta(busSeg2, "Viajando..."); $('nav-title').textContent = "Caminando al destino"; userMarker.setIcon(iconWalk); const walkFinal = await obtenerRutaCaminando(tramos[1].bajada, puntoB); await animarRuta(walkFinal, "Caminando al destino..."); } else { $('nav-title').textContent = "Caminando al destino"; userMarker.setIcon(iconWalk); const walkFinal = await obtenerRutaCaminando(tramos[0].bajada, puntoB); await animarRuta(walkFinal, "Caminando al destino..."); } $('nav-title').textContent = dict[currentLang].arrived; $('nav-desc').textContent = dict[currentLang].arrived_desc; }
+async function animarRuta(coords, text) { return new Promise(resolve => { let i = 0; const interval = setInterval(() => { if (i >= coords.length) { clearInterval(interval); resolve(); return; } userMarker.setLatLng(coords[i]); map.panTo(coords[i]); $('nav-desc').textContent = text; checkHistoryProximity(coords[i][0], coords[i][1]); i++; }, 80); window._simInterval = interval; }); }
+window.detenerNavegacion = function() { if (watchId !== null) navigator.geolocation.clearWatch(watchId); watchId = null; if (window._simInterval) clearInterval(window._simInterval); if (userMarker) map.removeLayer(userMarker); userMarker = null; navActiveRes = null; $('nav-hud').style.display = 'none'; plannerLayer.clearLayers(); };
+window.switchTab = function(tab) { document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); if (tab === 'explorar') { document.querySelectorAll('.tab')[0].classList.add('active'); $('tab-explorar').classList.add('active'); } else { document.querySelectorAll('.tab')[1].classList.add('active'); $('tab-planificar').classList.add('active'); } };
+
+// Eventos de archivo y botones
+$('fileInput').addEventListener('change', function(e) { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(event) { try { showToast('Leyendo archivo...', 'wait'); procesar(JSON.parse(event.target.result)); toggleSettings(); } catch (err) { showToast('Error: ' + err.message, 'error'); } }; reader.readAsText(file); });
+$('btnClear').addEventListener('click', async () => { if(confirm('¿Borrar datos?')) { await clearDB(); location.reload(); } });
+
+function sanitizeId(s) { return String(s).replace(/[^A-Za-z0-9_\-]/g, '_'); }
+function csvCell(v) { const s = v == null ? '' : String(v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function toCSV(rows) { return rows.map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n'; }
+function fmtTime(sec) { return String(Math.floor(sec/3600)).padStart(2,'0') + ':' + String(Math.floor((sec%3600)/60)).padStart(2,'0') + ':' + String(sec%60).padStart(2,'0'); }
+
+function construirGTFS() { const files = {}; files['agency.txt'] = toCSV([['agency_id','agency_name','agency_url','agency_timezone','agency_lang'], ['SIT_AQP','SIT Arequipa','https://www.sit.gob.pe','America/Lima','es']]); files['calendar.txt'] = toCSV([['service_id','monday','tuesday','wednesday','thursday','friday','saturday','sunday','start_date','end_date'], ['LV','1','1','1','1','1','0','0','20260101','20261231']]); const routesRows = [['route_id','agency_id','route_short_name','route_long_name','route_type','route_color','route_text_color']]; for (const [ref, r] of state.routes) routesRows.push([sanitizeId(ref), 'SIT_AQP', ref, r.name || ref, '3', (r.color || '').replace('#',''), 'FFFFFF']); files['routes.txt'] = toCSV(routesRows); const tripsRows = [['route_id','service_id','trip_id','trip_headsign','direction_id','shape_id']]; for (const tr of state.trips) tripsRows.push([sanitizeId(tr.routeRef), 'LV', sanitizeId(tr.id), tr.headsign || '', String(tr.directionId), 'S_' + sanitizeId(tr.id)]); files['trips.txt'] = toCSV(tripsRows); const stopsRows = [['stop_id','stop_name','stop_lat','stop_lon']]; for (const s of state.stops.values()) { if (s.used) stopsRows.push([sanitizeId(s.id), s.name, s.lat.toFixed(6), s.lon.toFixed(6)]); } files['stops.txt'] = toCSV(stopsRows); const stRows = [['trip_id','arrival_time','departure_time','stop_id','stop_sequence']]; for (const tr of state.trips) { let t = (tr.directionId === 0 ? 5 * 3600 : 5 * 3600 + 1800), seq = 1; for (const sid of tr.stopIds) { const hh = fmtTime(t); stRows.push([sanitizeId(tr.id), hh, hh, sanitizeId(sid), String(seq)]); seq++; t += 120; } } files['stop_times.txt'] = toCSV(stRows); const shRows = [['shape_id','shape_pt_lat','shape_pt_lon','shape_pt_sequence']]; for (const tr of state.trips) { const shapeId = 'S_' + sanitizeId(tr.id); let seq = 1; for (const p of tr.points) { shRows.push([shapeId, p[0].toFixed(6), p[1].toFixed(6), String(seq)]); seq++; } } files['shapes.txt'] = toCSV(shRows); return files; }
+$('btnGTFS').addEventListener('click', async () => { try { showToast('Generando GTFS...', 'wait'); const zip = new JSZip(); for (const [name, content] of Object.entries(construirGTFS())) zip.file(name, content); const blob = await zip.generateAsync({type: 'blob', compression: 'DEFLATE'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'sit-arequipa-gtfs.zip'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000); showToast('¡GTFS descargado!', 'success'); toggleSettings(); } catch (e) { showToast('Error: ' + e.message, 'error'); } });
+
+function cargarDatosEstaticos() { const demoData = { elements: [ { type: 'relation', id: 1, tags: { type:'route', route:'bus', ref:'BT1', name:'Troncal 1 (Ida)', operator:'Integra Arequipa S.A.C.' }, members: [ { type:'way', role:'', geometry:[{lat:-16.418,lon:-71.545},{lat:-16.405,lon:-71.535},{lat:-16.398,lon:-71.535}] } ]}, { type: 'relation', id: 2, tags: { type:'route', route:'bus', ref:'BT1', name:'Troncal 1 (Vuelta)', operator:'Integra Arequipa S.A.C.' }, members: [ { type:'way', role:'', geometry:[{lat:-16.398,lon:-71.535},{lat:-16.405,lon:-71.535},{lat:-16.418,lon:-71.545}] } ]}, { type: 'node', id: 101, lat: -16.418, lon: -71.545, tags: { highway: 'bus_stop', name: 'Terminal' } }, { type: 'node', id: 102, lat: -16.398, lon: -71.535, tags: { highway: 'bus_stop', name: 'Plaza de Armas' } } ]}; procesar(demoData); }
+setTimeout(init, 500);
+</script>
+</body>
+</html>
