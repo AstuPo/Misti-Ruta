@@ -26,14 +26,12 @@
   
   #map{position:absolute;top:0;left:0;right:0;bottom:0; z-index: 1; background-color: var(--bg-map); transition: filter 0.3s;}
   
-  /* Filtro CSS para Modo Oscuro (Asegura que los tiles carguen siempre) */
   .dark-tiles {
     filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
   }
 
   #panel, .modal-content, #nav-hud, .leaflet-popup-content, #mascot-card { font-size: calc(14px * var(--scale)); }
 
-  /* Panel Principal Retráctil */
   #panel{position:absolute;top:20px;left:20px;z-index:1000;width:380px;max-height:calc(100% - 40px);
          background:var(--bg-panel);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);
          overflow:hidden; display:flex; flex-direction:column; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);}
@@ -137,7 +135,6 @@
   .btn-action { flex: 1; padding: 12px; border-radius: 8px; font-size: 0.95em; font-weight: 700; cursor: pointer; border: none; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 6px;}
   .btn-start { background: var(--success); color: white; } .btn-start:hover { background: #047857; }
 
-  /* Modales */
   .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.6); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(4px);}
   .modal-content { background: var(--bg-panel); border-radius: var(--radius-lg); width: 90%; max-width: 400px; padding: 25px; box-shadow: var(--shadow-lg); position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); max-height: 90vh; overflow-y: auto; border: 1px solid var(--border);}
   @keyframes slideUp { from { transform: translateY(20px) scale(0.95); opacity: 0;} to { transform: translateY(0) scale(1); opacity: 1;} }
@@ -177,14 +174,13 @@
   .cancel-nav { background: var(--danger); color: white; }
   .cancel-nav:hover { background: #b91c1c; }
 
-  #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 3000; display: flex; flex-direction: column; gap: 10px; align-items: center; pointer-events: none;}
-  .toast { background: var(--primary); color: white; padding: 14px 24px; border-radius: 30px; font-size: 0.95em; font-weight: 600; box-shadow: var(--shadow-lg); opacity: 0; transform: translateY(20px); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: flex; align-items: center; gap: 10px;}
+  #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 3000; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; width: 90%; max-width: 350px;}
+  .toast { background: var(--primary); color: white; padding: 10px 18px; border-radius: 30px; font-size: 0.85em; font-weight: 600; box-shadow: var(--shadow-lg); opacity: 0; transform: translateY(20px); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: flex; align-items: center; gap: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;}
   .toast.show { opacity: 1; transform: translateY(0); }
   .toast.success { background: var(--success); }
   .toast.error { background: var(--danger); }
   .toast.wait { background: #f59e0b; }
 
-  /* Botones Flotantes */
   #btn-gps { position: absolute; bottom: 25px; right: 75px; z-index: 1000; width: 54px; height: 54px; border-radius: 50%; background: var(--bg-panel); color: var(--accent); border: none; box-shadow: var(--shadow-lg); cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 1.5em; transition: 0.2s; }
   #btn-gps:hover { transform: scale(1.05); background: var(--bg-body); }
 
@@ -204,13 +200,11 @@
   #mascot-card h3 { margin: 0 0 8px 0; color: var(--text-main); font-size: 1.2em; font-weight: 800;}
   #mascot-card p { margin: 0; font-size: 0.95em; color: var(--text-main); line-height: 1.6; text-align: left;}
 
-  /* Marcador de GPS del usuario */
   .user-location-marker {
     background: #2563eb; border-radius: 50%; width: 18px; height: 18px; border: 3px solid white;
     box-shadow: 0 0 0 4px rgba(37,99,235,0.3), 0 2px 5px rgba(0,0,0,0.3);
   }
 
-  /* Optimización para Móviles */
   @media (max-width: 768px) {
     #panel { width: calc(100% - 30px); top: 15px; left: 15px; max-height: 60vh; border-radius: 16px; }
     #btn-toggle-panel { left: calc(100% - 15px); top: 35%; }
@@ -392,7 +386,6 @@
 <script>
 if (typeof L === 'undefined') { alert('ERROR: Falta Leaflet.'); throw new Error(); }
 
-// SERVICE WORKER
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').then(registration => {
@@ -453,7 +446,6 @@ function applyTheme(theme) {
       document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
     }
     
-    // Aplicar filtro CSS al mapa en lugar de cambiar servidores
     if (isDark) {
       document.getElementById('map').classList.add('dark-tiles');
     } else {
@@ -538,7 +530,7 @@ const POI_DATA = {
     { id: 'comisaria_yanahuara', lat: -16.391439, lon: -71.542881, name: { es: 'Comisaría de Yanahuara', en: 'Yanahuara Police Station', qu: 'Yanahuara Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
     { id: 'comisaria_paucarpata', lat: -16.432114, lon: -71.506554, name: { es: 'Comisaría de Paucarpata', en: 'Paucarpata Police Station', qu: 'Paucarpata Chapati Wasi' }, desc: { es: 'Emergencias.', en: 'Emergency response.', qu: 'Yanapay.' } },
     { id: 'palacio_policia', lat: -16.40084, lon: -71.53662, name: { es: 'PNP Palacio Viejo', en: 'Palacio Viejo Police', qu: 'Chapati Wasin' }, desc: { es: 'Región Policial Arequipa.', en: 'Police Region.', qu: 'Arequipa Chapati.' } },
-    { id: 'comisaria_miraflores', lat: -16.39493, lon: -71.52386, name: { es: 'Comisaría de Miraflores', en: 'Miraflores Police Station', qu: 'Miraflores Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
+    { id: 'comisaria_miraflores', lat: -16.39493, lon: -71.52386, name: { es: 'Comisaría de Miraflores', en: 'Miraflores Police Station', qu: 'Miraflores Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychay.' } },
     { id: 'comisaria_melgar', lat: -16.39933, lon: -71.50666, name: { es: 'Comisaría de Mariano Melgar', en: 'Mariano Melgar Police Station', qu: 'Mariano Melgar Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychay.' } },
     { id: 'comisaria_hunter', lat: -16.44146, lon: -71.55487, name: { es: 'Comisaría de Hunter', en: 'Hunter Police Station', qu: 'Hunter Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychay.' } },
     { id: 'comisaria_socabaya', lat: -16.47218, lon: -71.52823, name: { es: 'Comisaría de Socabaya', en: 'Socabaya Police Station', qu: 'Socabaya Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychay.' } },
@@ -603,10 +595,8 @@ applyFontSize(currentFont);
 const iconWalk = L.divIcon({ className: 'custom-user-icon', html: '<div style="background:#2563eb; color:white; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-size:18px; border:3px solid white; box-shadow:0 3px 8px rgba(0,0,0,0.4);">🚶</div>', iconSize: [34, 34], iconAnchor: [17, 17] });
 const iconBus = L.divIcon({ className: 'custom-user-icon', html: '<div style="background:#dc2626; color:white; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-size:18px; border:3px solid white; box-shadow:0 3px 8px rgba(0,0,0,0.4);">🚌</div>', iconSize: [34, 34], iconAnchor: [17, 17] });
 
-// Marcador especial para la ubicación real del usuario
 const userLocationIcon = L.divIcon({ className: 'custom-user-icon', html: '<div class="user-location-marker"></div>', iconSize: [18, 18], iconAnchor: [9, 9] });
 let userLocationMarker = null;
-let gpsWatchId = null;
 
 const ROUTE_COLORS = {};
 const ROUTE_PALETTE = ['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4','#46f0f0','#f032e6', '#9a6324', '#800000', '#808000', '#000075', '#008080', '#ff7f50', '#1e90ff', '#bcf60c', '#ff1493', '#00ced1', '#ffd700', '#ff4500', '#9400d3'];
@@ -620,13 +610,20 @@ const $ = id => document.getElementById(id);
 
 function showToast(msg, type = 'success') {
   const container = $('toast-container');
+  // Limitar a máximo 2 toasts en pantalla para no saturar
+  if (container.children.length >= 2) {
+    container.removeChild(container.firstChild);
+  }
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   let icon = '✅'; if(type === 'error') icon = '❌'; if(type === 'wait') icon = '⏳';
   toast.innerHTML = `<span>${icon}</span> <span>${msg}</span>`;
   container.appendChild(toast);
   setTimeout(() => toast.classList.add('show'), 10);
-  setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
+  setTimeout(() => { 
+    toast.classList.remove('show'); 
+    setTimeout(() => { if(toast.parentNode) toast.remove(); }, 300); 
+  }, 3000);
 }
 
 function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -637,13 +634,11 @@ window.toggleSettings = function() {
   else { $('select-lang').value = currentLang; $('select-theme').value = currentTheme; $('select-font').value = currentFont; modal.style.display = 'flex'; }
 };
 
-// MEJORA: GPS que te sigue y te muestra en el mapa
+// CORRECCIÓN GPS: Ahora usa getCurrentPosition en lugar de watchPosition
 window.centrarGPS = function() {
   if (navigator.geolocation) {
     showToast('Buscando señal GPS...', 'wait');
-    if (gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
-    
-    gpsWatchId = navigator.geolocation.watchPosition(
+    navigator.geolocation.getCurrentPosition(
       (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
@@ -658,14 +653,13 @@ window.centrarGPS = function() {
       (err) => {
         showToast('Activa los permisos de ubicación en tu navegador.', 'error');
       },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000 }
     );
   } else {
     showToast('GPS no soportado en este navegador.', 'error');
   }
 };
 
-// Función para usar GPS como Origen en el planificador
 window.usarUbicacionActual = function() {
   if (navigator.geolocation) {
     showToast('Obteniendo tu ubicación...', 'wait');
