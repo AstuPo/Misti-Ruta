@@ -2,11 +2,11 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <title>Misti Ruta — SIT Arequipa</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"/>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
   :root {
     --scale: 1;
@@ -21,33 +21,55 @@
     --success: #34d399; --danger: #f87171; --bg-panel: #1e293b; --bg-body: #0f172a;
     --bg-map: #334155; --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155;
   }
+
   html,body{margin:0;height:100%;font-family:'Inter', sans-serif; background-color: var(--bg-body); color: var(--text-main); transition: background 0.3s, color 0.3s; overflow: hidden;}
-  #map{position:absolute;top:0;left:0;right:0;bottom:0; z-index: 1; background-color: var(--bg-map);}
+  
+  #map{position:absolute;top:0;left:0;right:0;bottom:0; z-index: 1; background-color: var(--bg-map); transition: filter 0.3s;}
+  
+  /* Filtro CSS para Modo Oscuro (Asegura que los tiles carguen siempre) */
+  .dark-tiles {
+    filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+  }
+
   #panel, .modal-content, #nav-hud, .leaflet-popup-content, #mascot-card { font-size: calc(14px * var(--scale)); }
+
+  /* Panel Principal Retráctil */
   #panel{position:absolute;top:20px;left:20px;z-index:1000;width:380px;max-height:calc(100% - 40px);
          background:var(--bg-panel);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);
          overflow:hidden; display:flex; flex-direction:column; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);}
+  
   #panel.collapsed { transform: translateX(calc(-100% - 30px)); }
-  #btn-toggle-panel { position: absolute; top: 50%; left: 400px; transform: translateY(-50%); z-index: 1005;
-    width: 24px; height: 60px; border-radius: 0 12px 12px 0; background: var(--bg-panel); border: 1px solid var(--border); border-left: none;
-    box-shadow: 4px 0 10px rgba(0,0,0,0.05); cursor: pointer; display: flex; justify-content: center; align-items: center;
-    transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s; color: var(--text-muted); font-weight: bold; font-size: 12px; }
+  
+  #btn-toggle-panel {
+    position: absolute; top: 50%; left: 400px; transform: translateY(-50%); z-index: 1005;
+    width: 24px; height: 60px; border-radius: 0 12px 12px 0;
+    background: var(--bg-panel); border: 1px solid var(--border); border-left: none;
+    box-shadow: 4px 0 10px rgba(0,0,0,0.05); cursor: pointer;
+    display: flex; justify-content: center; align-items: center;
+    transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s;
+    color: var(--text-muted); font-weight: bold; font-size: 12px;
+  }
   #btn-toggle-panel:hover { background: var(--bg-body); color: var(--accent); }
   #btn-toggle-panel.collapsed { left: 0px; border-radius: 0 12px 12px 0; }
+
   .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid var(--border); background: var(--bg-panel); }
   .panel-header h1 { font-size: 1.3em; font-weight: 800; margin: 0; color: var(--text-main); display: flex; align-items: center; gap: 10px; letter-spacing: -0.5px;}
   .settings-btn { background: transparent; border: none; font-size: 1.5em; cursor: pointer; color: var(--text-muted); transition: 0.2s; padding: 8px; border-radius: 50%; display: flex;}
   .settings-btn:hover { background: var(--bg-body); color: var(--accent); transform: rotate(45deg); }
+  
   .tabs { display: flex; padding: 10px 20px 0; border-bottom: 1px solid var(--border); background: var(--bg-panel); gap: 10px;}
   .tab { flex: 1; text-align: center; padding: 12px 0; cursor: pointer; font-weight: 600; font-size: 0.95em; color: var(--text-muted); position: relative; transition: 0.2s; border-radius: 8px 8px 0 0;}
   .tab:hover { color: var(--text-main); background: rgba(150,150,150,0.05);}
   .tab.active { color: var(--accent); }
   .tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 3px; background: var(--accent); border-radius: 3px 3px 0 0;}
+  
   .tab-content { display: none; padding: 20px; overflow-y: auto; flex: 1;}
   .tab-content.active { display: block; }
+  
   #rutas-container { max-height: 420px; overflow-y: auto; padding-right: 5px; margin-bottom: 10px;}
   #rutas-container::-webkit-scrollbar { width: 6px; }
   #rutas-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  
   .empresa-group { margin-bottom: 10px; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; background: var(--bg-panel); transition: 0.2s; box-shadow: var(--shadow-sm);}
   .empresa-group:hover { border-color: #cbd5e1; }
   .empresa-header { background: var(--bg-panel); padding: 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; font-size: 0.95em; color: var(--text-main); }
@@ -60,6 +82,7 @@
   .ruta .name{flex:1; overflow:hidden; color: var(--text-main); display:flex; flex-direction:column; justify-content:center;}
   .ruta .name .ref {font-weight:700; font-size:1.05em; color: var(--text-main);}
   .ruta .name .desc {font-size:0.85em; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;}
+
   .fav-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px; align-items: stretch; scrollbar-width: none; }
   .fav-row::-webkit-scrollbar { display: none; }
   .fav-btn { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 5px 8px 5px; cursor: pointer; min-width: 75px; transition: 0.2s; box-shadow: var(--shadow-sm);}
@@ -68,6 +91,7 @@
   .fav-btn .name { font-size: 0.8em; color: var(--text-main); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70px;}
   .fav-edit { position: absolute; top: -6px; right: -6px; background: var(--accent); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 10px; line-height: 22px; text-align: center; cursor: pointer; border: 2px solid var(--bg-panel); z-index: 2; box-shadow: var(--shadow-sm);}
   .fav-delete { position: absolute; top: -6px; left: -6px; background: var(--danger); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 10px; line-height: 22px; text-align: center; cursor: pointer; border: 2px solid var(--bg-panel); z-index: 2; box-shadow: var(--shadow-sm);}
+  
   .search-box { position: relative; margin-bottom: 15px; }
   .search-box input { width: 100%; padding: 14px 14px 14px 42px; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 0.95em; box-sizing: border-box; outline: none; transition: 0.2s; background: var(--bg-body); color: var(--text-main);}
   .search-box input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); background: var(--bg-panel);}
@@ -75,24 +99,32 @@
   #search-results { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); max-height: 200px; overflow-y: auto; z-index: 1000; display: none; margin-top: 5px;}
   .search-item { padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 0.9em; color: var(--text-main); transition: 0.1s;}
   .search-item:hover { background: var(--bg-body); }
+  
   .input-group { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; background: var(--bg-panel); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border); position: relative; box-shadow: var(--shadow-sm);}
   .input-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 0.9em; flex-shrink: 0;}
   .icon-a { background: var(--success); } .icon-b { background: var(--danger); }
   .input-group .text { flex: 1; font-size: 0.95em; color: var(--text-main); font-weight: 500;}
   .swap-btn { background: var(--bg-body); border: 1px solid var(--border); border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1em; transition: 0.2s; color: var(--text-main); box-shadow: var(--shadow-sm);}
   .swap-btn:hover { background: var(--border); transform: rotate(180deg);}
-  .main-btn { background: var(--accent); color: white; padding: 16px; border-radius: var(--radius-md); text-align: center; cursor: pointer; font-weight: 700; font-size: 1em; border: none; width: 100%; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: var(--shadow-md);}
+  
+  .main-btn { background: var(--accent); color: white; padding: 16px; border-radius: var(--radius-md); text-align: center; cursor: pointer; font-weight: 700; font-size: 1em; border: none; width: 100%; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: var(--shadow-md); margin-bottom: 10px;}
   .main-btn:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow-lg);}
   .main-btn:active { transform: translateY(1px); box-shadow: var(--shadow-sm);}
+  .main-btn.sec { background: var(--bg-body); color: var(--text-main); border: 1px solid var(--border); box-shadow: none; margin-bottom: 15px;}
+  .main-btn.sec:hover { background: var(--border); }
+  
   .step3-header { display:flex; gap:10px; margin-bottom:15px; align-items:center; background:var(--bg-body); padding:12px 15px; border-radius:var(--radius-md); border:1px solid var(--border); }
+  
   .plan-results { max-height: 380px; overflow-y: auto; padding-bottom: 10px;}
   .plan-results::-webkit-scrollbar { width: 6px; }
   .plan-results::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  
   .result-card { border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; margin-bottom: 14px; background: var(--bg-panel); transition: all 0.3s ease; position: relative; cursor: pointer; box-shadow: var(--shadow-sm);}
   .result-card:hover { box-shadow: var(--shadow-md); border-color: #cbd5e1; transform: translateY(-2px);}
   .result-card.inactive { opacity: 0.6; filter: grayscale(50%); } .result-card.active { border-color: var(--accent); box-shadow: 0 4px 12px rgba(37,99,235,0.15); transform: scale(1);}
   .result-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px dashed var(--border); padding-bottom: 12px;}
   .result-title { font-weight: 800; font-size: 1.1em; display: flex; flex-direction: column; gap: 2px; color: var(--text-main);}
+  
   .timeline { position: relative; margin-left: 5px; margin-bottom: 15px;}
   .timeline-item { display: flex; gap: 14px; margin-bottom: 12px; position: relative; }
   .t-icon { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8em; flex-shrink: 0; z-index: 2; border: 2px solid var(--bg-panel); box-shadow: var(--shadow-sm);}
@@ -104,32 +136,39 @@
   .card-actions { display: flex; gap: 8px; margin-top: 15px; }
   .btn-action { flex: 1; padding: 12px; border-radius: 8px; font-size: 0.95em; font-weight: 700; cursor: pointer; border: none; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 6px;}
   .btn-start { background: var(--success); color: white; } .btn-start:hover { background: #047857; }
+
+  /* Modales */
   .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.6); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(4px);}
   .modal-content { background: var(--bg-panel); border-radius: var(--radius-lg); width: 90%; max-width: 400px; padding: 25px; box-shadow: var(--shadow-lg); position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); max-height: 90vh; overflow-y: auto; border: 1px solid var(--border);}
   @keyframes slideUp { from { transform: translateY(20px) scale(0.95); opacity: 0;} to { transform: translateY(0) scale(1); opacity: 1;} }
   .modal-close { position: absolute; top: 15px; right: 20px; font-size: 1.5em; cursor: pointer; color: var(--text-muted); background: var(--bg-body); border: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s;}
   .modal-close:hover { background: var(--border); color: var(--text-main);}
   .modal-content h2 { margin-top: 0; font-size: 1.3em; font-weight: 800; color: var(--text-main); margin-bottom: 20px;}
+  
   .setting-group { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
   .setting-group:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0;}
   .setting-group label { display: block; font-size: 0.9em; font-weight: 700; color: var(--text-main); margin-bottom: 10px;}
   .setting-group select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-body); color: var(--text-main); font-family: inherit; font-size: 0.95em; outline: none; cursor: pointer; font-weight: 500;}
+  
   .switch { position: relative; display: inline-block; width: 46px; height: 26px; }
   .switch input { opacity: 0; width: 0; height: 0; }
   .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 26px; }
   .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: var(--shadow-sm);}
   input:checked + .slider { background-color: var(--accent); }
   input:checked + .slider:before { transform: translateX(20px); }
+  
   .btn-setting { background: var(--bg-body); color: var(--text-main); border: 1px solid var(--border); padding: 14px; border-radius: 8px; width: 100%; cursor: pointer; font-weight: 700; display: flex; align-items: center; gap: 10px; transition: 0.2s; font-size: 0.95em; justify-content: center; margin-top: 10px;}
   .btn-setting:hover { background: var(--border); }
   .btn-setting.danger { color: var(--danger); border-color: #fecaca; background: #fef2f2;}
   .btn-setting.danger:hover { background: #fee2e2; }
   #fileInput { display: none; }
+
   #predefined-favs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-height: 300px; overflow-y: auto; padding-right: 5px; margin-bottom: 15px;}
   .pred-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:14px 5px; border:1px solid var(--border); border-radius:var(--radius-md); cursor:pointer; transition:0.2s; background:var(--bg-panel); box-shadow: var(--shadow-sm);}
   .pred-btn:hover { background:var(--bg-body); border-color:var(--accent); transform:translateY(-2px); box-shadow: var(--shadow-md);}
   .pred-btn .icon { font-size: 1.5em; margin-bottom:5px; }
   .pred-btn .name { font-size: 0.8em; font-weight: 600; color: var(--text-main); text-align:center; }
+
   #nav-hud { display: none; position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--primary); color: white; padding: 25px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); z-index: 2000; width: 90%; max-width: 400px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
   #nav-hud h3 { margin: 0 0 8px 0; color: #34d399; font-size: 1.2em; font-weight: 800;} #nav-hud p { margin: 0 0 12px 0; font-size: 1em; color: #cbd5e1; font-weight: 500;}
   #nav-hud button { border: none; padding: 14px 15px; border-radius: 8px; margin-top: 10px; cursor: pointer; font-size: 0.95em; font-weight: 700; width: 100%; transition: 0.2s;}
@@ -137,19 +176,25 @@
   #btn-confirm-step:hover { background: #047857; }
   .cancel-nav { background: var(--danger); color: white; }
   .cancel-nav:hover { background: #b91c1c; }
+
   #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 3000; display: flex; flex-direction: column; gap: 10px; align-items: center; pointer-events: none;}
   .toast { background: var(--primary); color: white; padding: 14px 24px; border-radius: 30px; font-size: 0.95em; font-weight: 600; box-shadow: var(--shadow-lg); opacity: 0; transform: translateY(20px); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: flex; align-items: center; gap: 10px;}
   .toast.show { opacity: 1; transform: translateY(0); }
   .toast.success { background: var(--success); }
   .toast.error { background: var(--danger); }
   .toast.wait { background: #f59e0b; }
+
+  /* Botones Flotantes */
   #btn-gps { position: absolute; bottom: 25px; right: 75px; z-index: 1000; width: 54px; height: 54px; border-radius: 50%; background: var(--bg-panel); color: var(--accent); border: none; box-shadow: var(--shadow-lg); cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 1.5em; transition: 0.2s; }
   #btn-gps:hover { transform: scale(1.05); background: var(--bg-body); }
+
   #mascot-btn { position: absolute; bottom: 25px; right: 145px; z-index: 1000; width: 60px; height: 60px; border-radius: 50%; background: #fbbf24; border: 3px solid #ffffff; box-shadow: var(--shadow-lg); cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 2em; transition: 0.3s; animation: bounce 2s infinite;}
   #mascot-btn:hover { transform: scale(1.1); }
   @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
   .delete-marker-btn { position: absolute; top: -8px; right: -8px; background: var(--danger); color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; font-weight: bold; line-height: 20px; text-align: center; cursor: pointer; border: 2px solid white; z-index: 100; box-shadow: var(--shadow-sm);}
   .delete-marker-btn:hover { background: #b91c1c; transform: scale(1.1);}
+
   #mascot-card { display: none; position: absolute; bottom: 100px; right: 25px; width: 340px; background: var(--bg-panel); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); z-index: 2500; overflow: hidden; border: 1px solid var(--border); animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
   #mascot-card .header { background: #fbbf24; color: #000; padding: 14px 18px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; font-size: 1.05em;}
   #mascot-card .close { cursor: pointer; font-size: 22px; line-height: 1; opacity: 0.7;}
@@ -158,7 +203,25 @@
   .mascot-avatar-small { width: 60px; height: 60px; background: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2em; border: 2px solid #f59e0b; margin-bottom: 15px;}
   #mascot-card h3 { margin: 0 0 8px 0; color: var(--text-main); font-size: 1.2em; font-weight: 800;}
   #mascot-card p { margin: 0; font-size: 0.95em; color: var(--text-main); line-height: 1.6; text-align: left;}
-  .leaflet-popup-content { margin: 10px 14px; font-family: 'Inter', sans-serif; }
+
+  /* Marcador de GPS del usuario */
+  .user-location-marker {
+    background: #2563eb; border-radius: 50%; width: 18px; height: 18px; border: 3px solid white;
+    box-shadow: 0 0 0 4px rgba(37,99,235,0.3), 0 2px 5px rgba(0,0,0,0.3);
+  }
+
+  /* Optimización para Móviles */
+  @media (max-width: 768px) {
+    #panel { width: calc(100% - 30px); top: 15px; left: 15px; max-height: 60vh; border-radius: 16px; }
+    #btn-toggle-panel { left: calc(100% - 15px); top: 35%; }
+    #btn-toggle-panel.collapsed { left: 0; top: 35%; }
+    #mascot-card { width: calc(100% - 30px); right: 15px; bottom: 90px; }
+    #mascot-btn { right: 15px; bottom: 90px; width: 50px; height: 50px; font-size: 1.5em; }
+    #btn-gps { right: 75px; bottom: 90px; width: 50px; height: 50px; }
+    .leaflet-control-zoom { margin-bottom: 90px !important; margin-right: 15px !important; }
+    .fav-btn { min-width: 65px; padding: 8px 3px; }
+    .fav-btn .name { font-size: 0.75em; }
+  }
 </style>
 </head>
 <body>
@@ -206,13 +269,16 @@
       <input type="text" id="search-input" placeholder="Buscar dirección, lugar..." data-i18n="search_placeholder" autocomplete="off">
       <div id="search-results"></div>
     </div>
+    
     <div id="plan-step-1">
       <div class="input-group">
         <div class="input-icon icon-a">A</div>
         <div class="text" id="text-a" data-i18n="enter_origin">Ingresa tu origen</div>
       </div>
+      <button class="main-btn sec" onclick="usarUbicacionActual()">📍 Usar mi ubicación actual</button>
       <button class="main-btn" id="btn-set-a" onclick="activarModoMapa('A')" data-i18n="mark_a">📍 Marcar Punto A</button>
     </div>
+
     <div id="plan-step-2" style="display:none;">
       <div class="input-group">
         <div class="input-icon icon-a">A</div>
@@ -225,6 +291,7 @@
       </div>
       <button class="main-btn" id="btn-set-b" onclick="activarModoMapa('B')" data-i18n="mark_b">📍 Marcar Punto B</button>
     </div>
+
     <div id="plan-step-3" style="display:none;">
       <div class="step3-header">
         <div class="input-icon icon-a" style="width:22px;height:22px;font-size:0.8em;">A</div>
@@ -233,6 +300,7 @@
         <div class="input-icon icon-b" style="width:22px;height:22px;font-size:0.8em; margin-left:5px;">B</div>
         <div style="flex:1; font-size:0.85em; font-weight:600;" id="text-b-final">Destino</div>
       </div>
+      
       <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button class="main-btn" style="background:var(--accent);" onclick="calcularRutasPlanner()" data-i18n="calculate">🚀 Calcular</button>
         <button class="main-btn" style="background:#64748b; flex:0.4;" onclick="limpiarPlanificador()">🗑️</button>
@@ -384,13 +452,19 @@ function applyTheme(theme) {
       isDark = theme === 'dark';
       document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
     }
-    if (currentTileLayer && map) map.removeLayer(currentTileLayer);
-    if (map) {
-      if (isDark) {
-        currentTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 }).addTo(map);
-      } else {
-        currentTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 }).addTo(map);
-      }
+    
+    // Aplicar filtro CSS al mapa en lugar de cambiar servidores
+    if (isDark) {
+      document.getElementById('map').classList.add('dark-tiles');
+    } else {
+      document.getElementById('map').classList.remove('dark-tiles');
+    }
+
+    if (!currentTileLayer) {
+      currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+        attribution: '&copy; OpenStreetMap', 
+        maxZoom: 19 
+      }).addTo(map);
     }
   } catch(e) { console.warn("Error applying theme", e); }
 }
@@ -465,13 +539,13 @@ const POI_DATA = {
     { id: 'comisaria_paucarpata', lat: -16.432114, lon: -71.506554, name: { es: 'Comisaría de Paucarpata', en: 'Paucarpata Police Station', qu: 'Paucarpata Chapati Wasi' }, desc: { es: 'Emergencias.', en: 'Emergency response.', qu: 'Yanapay.' } },
     { id: 'palacio_policia', lat: -16.40084, lon: -71.53662, name: { es: 'PNP Palacio Viejo', en: 'Palacio Viejo Police', qu: 'Chapati Wasin' }, desc: { es: 'Región Policial Arequipa.', en: 'Police Region.', qu: 'Arequipa Chapati.' } },
     { id: 'comisaria_miraflores', lat: -16.39493, lon: -71.52386, name: { es: 'Comisaría de Miraflores', en: 'Miraflores Police Station', qu: 'Miraflores Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
-    { id: 'comisaria_melgar', lat: -16.39933, lon: -71.50666, name: { es: 'Comisaría de Mariano Melgar', en: 'Mariano Melgar Police Station', qu: 'Mariano Melgar Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
-    { id: 'comisaria_hunter', lat: -16.44146, lon: -71.55487, name: { es: 'Comisaría de Hunter', en: 'Hunter Police Station', qu: 'Hunter Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
-    { id: 'comisaria_socabaya', lat: -16.47218, lon: -71.52823, name: { es: 'Comisaría de Socabaya', en: 'Socabaya Police Station', qu: 'Socabaya Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
-    { id: 'comisaria_sachaca', lat: -16.4245, lon: -71.567, name: { es: 'Comisaría de Sachaca', en: 'Sachaca Police Station', qu: 'Sachaca Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
-    { id: 'comisaria_selva_alegre', lat: -16.382, lon: -71.532, name: { es: 'Comisaría de Alto Selva Alegre', en: 'Alto Selva Alegre Police Station', qu: 'Alto Selva Alegre Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
-    { id: 'comisaria_characato', lat: -16.465, lon: -71.484, name: { es: 'Comisaría de Characato', en: 'Characato Police Station', qu: 'Characato Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } },
-    { id: 'comisaria_jlbyr', lat: -16.42432, lon: -71.52941, name: { es: 'Comisaría de JLByR', en: 'JLByR Police Station', qu: 'JLByR Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychaq.' } }
+    { id: 'comisaria_melgar', lat: -16.39933, lon: -71.50666, name: { es: 'Comisaría de Mariano Melgar', en: 'Mariano Melgar Police Station', qu: 'Mariano Melgar Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychay.' } },
+    { id: 'comisaria_hunter', lat: -16.44146, lon: -71.55487, name: { es: 'Comisaría de Hunter', en: 'Hunter Police Station', qu: 'Hunter Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychay.' } },
+    { id: 'comisaria_socabaya', lat: -16.47218, lon: -71.52823, name: { es: 'Comisaría de Socabaya', en: 'Socabaya Police Station', qu: 'Socabaya Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychay.' } },
+    { id: 'comisaria_sachaca', lat: -16.4245, lon: -71.567, name: { es: 'Comisaría de Sachaca', en: 'Sachaca Police Station', qu: 'Sachaca Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychay.' } },
+    { id: 'comisaria_selva_alegre', lat: -16.382, lon: -71.532, name: { es: 'Comisaría de Alto Selva Alegre', en: 'Alto Selva Alegre Police Station', qu: 'Alto Selva Alegre Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychay.' } },
+    { id: 'comisaria_characato', lat: -16.465, lon: -71.484, name: { es: 'Comisaría de Characato', en: 'Characato Police Station', qu: 'Characato Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychay.' } },
+    { id: 'comisaria_jlbyr', lat: -16.42432, lon: -71.52941, name: { es: 'Comisaría de JLByR', en: 'JLByR Police Station', qu: 'JLByR Chapati Wasi' }, desc: { es: 'Seguridad ciudadana.', en: 'Citizen security.', qu: 'Llaqta waqaychay.' } }
   ]
 };
 
@@ -529,6 +603,11 @@ applyFontSize(currentFont);
 const iconWalk = L.divIcon({ className: 'custom-user-icon', html: '<div style="background:#2563eb; color:white; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-size:18px; border:3px solid white; box-shadow:0 3px 8px rgba(0,0,0,0.4);">🚶</div>', iconSize: [34, 34], iconAnchor: [17, 17] });
 const iconBus = L.divIcon({ className: 'custom-user-icon', html: '<div style="background:#dc2626; color:white; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-size:18px; border:3px solid white; box-shadow:0 3px 8px rgba(0,0,0,0.4);">🚌</div>', iconSize: [34, 34], iconAnchor: [17, 17] });
 
+// Marcador especial para la ubicación real del usuario
+const userLocationIcon = L.divIcon({ className: 'custom-user-icon', html: '<div class="user-location-marker"></div>', iconSize: [18, 18], iconAnchor: [9, 9] });
+let userLocationMarker = null;
+let gpsWatchId = null;
+
 const ROUTE_COLORS = {};
 const ROUTE_PALETTE = ['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4','#46f0f0','#f032e6', '#9a6324', '#800000', '#808000', '#000075', '#008080', '#ff7f50', '#1e90ff', '#bcf60c', '#ff1493', '#00ced1', '#ffd700', '#ff4500', '#9400d3'];
 let colorIndex = 0;
@@ -558,11 +637,50 @@ window.toggleSettings = function() {
   else { $('select-lang').value = currentLang; $('select-theme').value = currentTheme; $('select-font').value = currentFont; modal.style.display = 'flex'; }
 };
 
+// MEJORA: GPS que te sigue y te muestra en el mapa
 window.centrarGPS = function() {
   if (navigator.geolocation) {
-    showToast('Obteniendo ubicación...', 'wait');
-    navigator.geolocation.getCurrentPosition((pos) => { map.flyTo([pos.coords.latitude, pos.coords.longitude], 16); showToast('Ubicación encontrada', 'success'); }, (err) => { showToast('No se pudo obtener la ubicación', 'error'); }, { enableHighAccuracy: true });
-  } else { showToast('GPS no soportado', 'error'); }
+    showToast('Buscando señal GPS...', 'wait');
+    if (gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
+    
+    gpsWatchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        if (!userLocationMarker) {
+          userLocationMarker = L.marker([lat, lng], {icon: userLocationIcon, zIndexOffset: 1000}).addTo(map);
+        } else {
+          userLocationMarker.setLatLng([lat, lng]);
+        }
+        map.flyTo([lat, lng], 16, {duration: 1.5});
+        showToast('Ubicación encontrada', 'success');
+      },
+      (err) => {
+        showToast('Activa los permisos de ubicación en tu navegador.', 'error');
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+    );
+  } else {
+    showToast('GPS no soportado en este navegador.', 'error');
+  }
+};
+
+// Función para usar GPS como Origen en el planificador
+window.usarUbicacionActual = function() {
+  if (navigator.geolocation) {
+    showToast('Obteniendo tu ubicación...', 'wait');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+        setPuntoA(latlng, "Mi ubicación actual");
+        map.flyTo(latlng, 16);
+      },
+      (err) => { showToast('No se pudo obtener tu ubicación.', 'error'); },
+      { enableHighAccuracy: true }
+    );
+  } else {
+    showToast('GPS no soportado.', 'error');
+  }
 };
 
 const defaultFavs = [ { id: 'casa', name: dict[currentLang].fav_casa, icon: '🏠', lat: null, lng: null }, { id: 'trabajo', name: dict[currentLang].fav_trabajo, icon: '💼', lat: null, lng: null }, { id: 'escuela', name: dict[currentLang].fav_escuela, icon: '🏫', lat: null, lng: null } ];
@@ -633,16 +751,12 @@ async function saveDataToDB(json) { const db = await openDB(); const tx = db.tra
 async function loadDataFromDB() { const db = await openDB(); const tx = db.transaction('files', 'readonly'); const req = tx.objectStore('files').get('osm_json'); return new Promise(res => req.onsuccess = () => res(req.result)); }
 async function clearDB() { const db = await openDB(); const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').delete('osm_json'); return new Promise(res => tx.oncomplete = res); }
 
-// ==========================================
-// INICIO Y CARGA AUTOMÁTICA DEL JSON
-// ==========================================
 async function init() {
   applyLanguage(currentLang);
   renderFavoritos();
   updateAllLayers(); 
   
   try { 
-    // 1. Intentar cargar desde la memoria del navegador
     const savedJson = await loadDataFromDB(); 
     if (savedJson) { 
       showToast('Cargando datos guardados...', 'wait'); 
@@ -652,7 +766,6 @@ async function init() {
     } 
   } catch(e) { }
 
-  // 2. Si no hay datos en memoria, buscar el archivo rutas.json en el servidor (GitHub Pages)
   try {
     showToast('Descargando rutas por primera vez...', 'wait');
     const response = await fetch('rutas.json');
@@ -665,7 +778,6 @@ async function init() {
     console.warn("No se encontró rutas.json en el servidor.");
   }
 
-  // 3. Si todo falla, cargar demo
   showToast('No hay datos. Sube un archivo JSON manualmente.', 'error'); 
   cargarDatosEstaticos();
 }
